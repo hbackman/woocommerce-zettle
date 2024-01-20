@@ -12,6 +12,16 @@ if (! function_exists("dd")) {
     }
 }
 
+if (! function_exists("z_is_connected")) {
+    /**
+     * Check if Zettle is connected/
+     */
+    function z_is_connected(): bool
+    {
+        return get_option("zettle_token") && get_option("vendor_token");
+    }
+}
+
 if (! function_exists("z_plugin_enabled")) {
     /**
      * Check if a plugin is enabled.
@@ -37,5 +47,20 @@ if (! function_exists("z_plugin_disable")) {
     {
         include_once ABSPATH . 'wp-admin/includes/plugin.php';
         deactivate_plugins($plugin);
+    }
+}
+
+if (! function_exists("z_header_map")) {
+    /**
+     * Transforms a key value map into curl format.
+     */
+    function z_prepare_headers(array $headers): array
+    {
+        $output = [];
+
+        foreach ($headers as $key => $value)
+            $output[] = "$key: $value";
+
+        return $output;
     }
 }

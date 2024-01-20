@@ -1,116 +1,129 @@
 <?php
 namespace Zettle;
 
-use InvalidArgumentException;
+defined("ABSPATH") or exit;
+
+use Ramsey\Uuid\Uuid;
+use WP_HTTP_Requests_Response;
+use WP_Error;
+use Zettle\Support\Arr;
+use Exception;
 
 class Zettle
 {
-    const OAUTH_URL  = "https://oauth.zettle.com";
-    const PUSHER_URL = "https://pusher.izettle.com";
-
     /**
-     * Retrieve a Zettle access token.
+     * Prepare the zettle api endpoint.
      */
-    public function get_access_token()
+    private function get_endpoint(string $domain): string
     {
-        $code = "";
-
-        // $this->handle_authorization_code_grant($code);
-        // $this->handle_refresh_token_grant();
+        return "https://$domain.izettle.com/organizations/self";
     }
 
     /**
-     * Request a new access token using an authorization code.
+     * Retrieve the zettle signing key.
      */
-    private function handle_authorization_code_grant(string $code): void
+    public function get_signing_key(): string
     {
-        // Retrieve Auth Settings
-        $client_id     = get_option("wc_zettle_client_id");
-        $client_secret = get_option("wc_zettle_client_secret");
-
-        $payload = [
-            "grant_type"    => "authorization_code",
-            "code"          => $code,
-            "client_id"     => $client_id,
-            "client_secret" => $client_secret,
-            "redirect_uri"  => "https://httpbin.org/get",
-        ];
-
-        $content = self::send_request("POST", self::OAUTH_URL."/token", $payload);
-
-        $has_tokens =
-            array_key_exists("access_token", $content) &&
-            array_key_exists("refresh_token", $content);
-
-        if (! $has_tokens)
-            throw new InvalidArgumentException("Unexpected response");
-
-        update_option("wc_zettle_access_token", $content["access_token"]);
-        update_option("wc_zettle_refresh_token", $content["refresh_token"]);
+        return (string) get_option("zettle_signing_key");
     }
 
     /**
-     * Request a new access token using the refresh token.
+     * Update the zettle signing key.
      */
-    private function handle_refresh_token_grant(): void
+    public function set_signing_key(string $key): void
     {
-        $client_id     = get_option("wc_zettle_client_id");
-        $client_secret = get_option("wc_zettle_client_secret");
+        update_option("zettle_signing_key", $key);
+    }
+
+    /**
+     * Register a subscription in zettle.
+     */
+    public function create_pusher_subscription(array $events): void
+    {
+        $this->delete_pusher_subscription();
 
         $payload = [
-            "grant_type"    => "refresh_token",
-            "refresh_token" => get_option("wc_zettle_refresh_token"),
-            "client_id"     => $client_id,
-            "client_secret" => $client_secret,
+            "uuid"          => Uuid::uuid1()->toString(),
+            "transportName" => "WEBHOOK",
+            "destination"   => "https://6cfc-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook",
+            "contactEmail"  => "webhook@hbackman.com",
+            "eventNames"    => $events,
         ];
 
-        $content = self::send_request("POST", self::OAUTH_URL."/token", $payload);
+        $response = $this->json_request("POST", $this->get_endpoint("pusher")."/subscriptions", $payload);
 
-        $has_tokens =
-            array_key_exists("access_token", $content) &&
-            array_key_exists("refresh_token", $content);
+        if (false == $this->is_successful($response)) {
+            // TODO: Print notice.
 
-        if (! $has_tokens)
-            throw new InvalidArgumentException("Unexpected response");
+            Plugin::instance()->panic();
+        }
 
-        update_option("wc_zettle_access_token", $content["access_token"]);
-        update_option("wc_zettle_refresh_token", $content["refresh_token"]);
+        $this->set_signing_key(
+            Arr::get($response->get_data(), "signingKey", "")
+        );
+    }
+
+    /**
+     * Unregister a subscription in zettle.
+     */
+    public function delete_pusher_subscription(): void
+    {
+        $response = $this->json_request("GET", $this->get_endpoint("pusher")."/subscriptions");
+
+        if (false == $this->is_successful($response)) {
+            return;
+        }
+
+        $webhooks = $response->get_data();
+        $webhooks = Arr::pluck($webhooks, "uuid");
+
+        foreach ($webhooks as $uuid) {
+            $this->json_request("DELETE", $this->get_endpoint("pusher")."/subscriptions/$uuid");
+        }
+    }
+
+    /**
+     * Return whether the request was successful.
+     */
+    private function is_successful(WP_HTTP_Requests_Response $response): bool
+    {
+        return
+            $response->get_status() >= 200 &&
+            $response->get_status() <= 299;
     }
 
     /**
      * Send a request.
      */
-    public static function send_request(
+    private function json_request(
         string $method,
         string $url,
-        array  $payload = []
-    ): array
+        ?array $payload = null
+    ): WP_HTTP_Requests_Response
     {
-        // Ensure valid method.
-        if (! in_array($method, ["GET", "POST"]))
-            throw new InvalidArgumentException("Unsupported request method.");
-
-        $ch = curl_init();
-
-        // Set url, method and data.
-        if ($method == "GET") {
-            curl_setopt($ch, CURLOPT_URL, "$url?".http_build_query($payload));
+        if ($payload) {
+            $payload = json_encode($payload);
         }
 
-        if ($method == "POST") {
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_POST, false);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
-        }
+        $response = wp_remote_request($url, [
+            "body"    => $payload,
+            "method"  => $method,
+            "headers" => [
+                "Authorization"  => "Bearer ".Plugin::instance()->get_zettle_token(),
+                "Content-Type"   => "application/json",
+                "Content-Length" => strlen($payload),
+            ],
+        ]);
 
-        // Return data rather than printing it.
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        if ($response instanceof WP_Error)
+            throw new Exception("Response returned error.");
 
-        $body = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $response = $response["http_response"];
 
-        curl_close($ch);
+        /** @var WP_HTTP_Requests_Response $response */
 
-        return json_decode($body, true);
+        $response->set_data(json_decode($response->get_data(), true));
+
+        return $response;
     }
 }

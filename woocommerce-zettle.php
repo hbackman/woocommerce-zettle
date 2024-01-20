@@ -11,13 +11,19 @@ defined("ABSPATH") or exit;
 
 use Zettle\Plugin;
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+define('ZETTLE_PLUGIN', __FILE__);
+
 /*
  * Composer Autoload.
  */
 require __DIR__ . "/vendor/autoload.php";
 
 if (z_plugin_enabled("woocommerce/woocommerce.php") == false) {
-    z_plugin_disable(__FILE__);
+    z_plugin_disable(ZETTLE_PLUGIN);
 
     add_action('admin_notices', function () {
         global $current_screen;
