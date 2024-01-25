@@ -45,7 +45,7 @@ class Zettle
         $payload = [
             "uuid"          => Uuid::uuid1()->toString(),
             "transportName" => "WEBHOOK",
-            "destination"   => "https://6cfc-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook",
+            "destination"   => Plugin::instance()->get_webhook_url(),
             "contactEmail"  => "webhook@hbackman.com",
             "eventNames"    => $events,
         ];
@@ -55,7 +55,8 @@ class Zettle
         if (false == $this->is_successful($response)) {
             // TODO: Print notice.
 
-            Plugin::instance()->panic();
+            return;
+            // Plugin::instance()->panic();
         }
 
         $this->set_signing_key(
@@ -83,13 +84,25 @@ class Zettle
     }
 
     /**
+     * Retrieve a product by its uuid.
+     */
+    public function get_product(string $uuid): ?array
+    {
+        $response = $this->json_request("GET", $this->get_endpoint("products")."/products/$uuid");
+
+        if (false == $this->is_successful($response))
+            return null;
+
+        return (array) $response->get_data();
+    }
+
+    /**
      * Return whether the request was successful.
      */
     private function is_successful(WP_HTTP_Requests_Response $response): bool
     {
-        return
-            $response->get_status() >= 200 &&
-            $response->get_status() <= 299;
+        return $response->get_status() >= 200 &&
+               $response->get_status() <= 299;
     }
 
     /**

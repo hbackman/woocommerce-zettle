@@ -76,7 +76,7 @@ class Jwt
      */
     public function isExpired(): bool
     {
-        return $this->getPayload()["exp"] > time();
+        return $this->getPayload()["exp"] < time();
     }
 
     /**

@@ -15,6 +15,5 @@ class TestMessage extends Webhook
      */
     public function handle(Request $request)
     {
-        dd($request->json());
     }
 }

@@ -3,6 +3,7 @@ namespace Zettle;
 
 defined("ABSPATH") or exit;
 
+use Automattic\Jetpack\Constants;
 use Zettle\Admin\Settings;
 use Zettle\Support\Jwt;
 use Zettle\Webhook\ProductCreate;
@@ -24,8 +25,8 @@ class Plugin
      * @var class-string<Webhook>[]
      */
     private array $webhooks = [
-        ProductCreate::class,
         TestMessage::class,
+        ProductCreate::class,
     ];
 
     /**
@@ -40,9 +41,6 @@ class Plugin
     {
         $this->zettle = new Zettle();
 
-        add_action("woocommerce_init", function () {
-        });
-
         $this->init_webhooks();
         $this->init_settings();
     }
@@ -52,7 +50,15 @@ class Plugin
      */
     public function panic(): void
     {
+        if (Constants::get_constant("WP_DEBUG")) {
+            dd("panic", debug_backtrace());
+            dd(debug_backtrace());
+        }
+
         z_plugin_disable(ZETTLE_PLUGIN);
+
+        update_option("zettle_token", null);
+        update_option("vendor_token", null);
     }
 
     /**
@@ -85,13 +91,14 @@ class Plugin
             // If the refresh fails, then reset both the zettle and vendor token
             // and show a notice for the user to reconnect.
 
-            update_option("zettle_token", null);
-            update_option("vendor_token", null);
+            $this->panic();
 
             // TODO: Notice
+
+            return null;
         }
 
-        return $token ? $token->getToken() : null;
+        return $token->getToken();
     }
 
     /**
@@ -104,7 +111,7 @@ class Plugin
             "customer_token" => $this->get_customer_token(),
         ];
 
-        $response = wp_remote_post("http://host.docker.internal:5010/refresh", ['body' => $payload]);
+        $response = wp_remote_post("http://host.docker.internal:5010/refresh", ["body" => $payload]);
         $response = $response["http_response"];
 
         if ($response->get_status() != 200)
@@ -113,7 +120,7 @@ class Plugin
         $payload = $response->get_data();
         $payload = json_decode($payload, true);
 
-        return $payload["zettle_token"];
+        return (string) $payload["zettle_token"];
     }
 
     /**
@@ -121,7 +128,7 @@ class Plugin
      */
     public function get_customer_id(): string
     {
-        return wp_get_current_user()->user_email;
+        return get_bloginfo('admin_email');
     }
 
     /**
@@ -130,6 +137,14 @@ class Plugin
     public function get_customer_token(): ?string
     {
         return get_option("vendor_token");
+    }
+
+    /**
+     * Retrieve the url used for incoming webhooks.
+     */
+    public function get_webhook_url(): string
+    {
+        return "https://7571-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
     }
 
     /**
