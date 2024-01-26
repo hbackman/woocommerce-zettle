@@ -14,64 +14,7 @@ class Settings extends WC_Settings_Page
         $this->id    = "zettle";
         $this->label = "Zettle";
 
-        add_filter("woocommerce_settings_tabs_array",      [$this, "add_settings_page"], 20);
-        add_action("woocommerce_settings_{$this->id}",     [$this, "output"]);
-        add_action("woocommerce_admin_field_zettle_login", [$this, "zettle_login"]);
-
         parent::__construct();
-
-        $this->check_for_zettle_return();
-        $this->check_for_disconnect();
-    }
-
-    /**
-     * Check for if the user was returned from the auth service.
-     */
-    private function check_for_zettle_return(): void
-    {
-        $was_returned =
-            array_key_exists("zettle_token", $_GET) &&
-            array_key_exists("vendor_token", $_GET);
-
-        if (! $was_returned)
-            return;
-
-        update_option("zettle_token", $_GET["zettle_token"] ?? null);
-        update_option("vendor_token", $_GET["vendor_token"] ?? null);
-
-        // Invoke events.
-
-        do_action("zettle_connected");
-
-        // Redirect a final time.
-
-        $redirect = admin_url("admin.php?page=wc-settings&tab=".esc_attr($this->id));
-
-        wp_redirect($redirect);
-    }
-
-    /**
-     * Check if the user clicked the disconnect button.
-     */
-    private function check_for_disconnect(): void
-    {
-        $has_param = array_key_exists("disconnect", $_GET);
-
-        if (! $has_param)
-            return;
-
-        update_option("zettle_token", null);
-        update_option("vendor_token", null);
-
-        // Invoke events.
-
-        do_action("zettle_disconnected");
-
-        // Redirect
-
-        $redirect = admin_url("admin.php?page=wc-settings&tab=".esc_attr($this->id));
-
-        wp_redirect($redirect);
     }
 
     /**
@@ -87,11 +30,17 @@ class Settings extends WC_Settings_Page
                 "id"    => "wc_zettle_auth",
             ],
             [
-                "title" => __("Connection", "wc_zettle"),
-                "type"  => "zettle_login",
+                "title" => "Client ID",
+                "type"  => "text",
+                "id"    => "wc_zettle_client_id",
             ],
             [
-                "title" => "Token",
+                "title" => "API-key",
+                "type"  => "text",
+                "id"    => "wc_zettle_client_secret",
+            ],
+            [
+                "title" => "Access Token",
                 "type"  => "textarea",
                 "value" => get_option("zettle_token"),
                 "custom_attributes" => [
@@ -117,48 +66,36 @@ class Settings extends WC_Settings_Page
         ]);
     }
 
-
     /**
-     *	Output the settings
+     * Save settings.
      */
-    public function output()
+    public function save()
     {
-        global $hide_save_button;
+        $connected = Plugin::instance()->is_connected();
 
-        $hide_save_button = true;
+        parent::save();
 
-        WC_Admin_Settings::output_fields($this->get_settings());
+        // After the settings has been saved, check which fields have been updated
+        // and determine if Zettle has recently been connected or disconnected.
+
+        $client_id = get_option("wc_zettle_client_id");
+        $client_sc = get_option("wc_zettle_client_secret");
+
+        if ($connected) {
+            if (empty($client_id) || empty($client_sc))
+                do_action("zettle_disconnected");
+        }
+        else {
+            if (!empty($client_id) && !empty($client_sc))
+                do_action("zettle_connected");
+        }
     }
 
     /**
-     * Print a zettle login button.
+     *	Output the settings.
      */
-    public function zettle_login(array $options)
+    public function output()
     {
-        $redirect_uri = site_url("/wp-admin/admin.php?page=wc-settings&tab=zettle");
-        $customer_uid = Plugin::instance()->get_customer_id();
-
-        $link = sprintf(
-            "http://localhost:5010/connect?customer_id=%s&redirect_uri=%s",
-            urlencode($customer_uid),
-            urlencode($redirect_uri)
-        );
-
-        $disconnect = $redirect_uri."&disconnect=1";
-
-        ?><tr valign="top">
-            <th scope="row" class="titledesc">
-                <?php echo $options["title"] ?? ""; ?>
-            </th>
-            <td class="forminp">
-                <?php if (z_is_connected()): ?>
-                    Connected (<a href="<?php echo $disconnect; ?>">Disconnect</a>)
-                <?php else: ?>
-                    <a href="<?php echo $link; ?>" class="button-primary woocommerce-save-button">
-                        Connect
-                    </a>
-                <?php endif; ?>
-            </td>
-        </tr><?php
+        WC_Admin_Settings::output_fields($this->get_settings());
     }
 }

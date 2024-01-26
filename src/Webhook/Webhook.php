@@ -47,4 +47,15 @@ abstract class Webhook
 
         return [$payload, $message,];
     }
+
+    /**
+     * Report an error.
+     */
+    protected function error(string $code, ...$args): void
+    {
+        $message = "$code (".implode(",", $args).")";
+        $context = ["source" => "woocommerce-zettle"];
+
+        wc_get_logger()->error($message, $context);
+    }
 }

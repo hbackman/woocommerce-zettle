@@ -1,40 +1,40 @@
 {
-    "name": "hbackman/woocommerce-zettle",
-    "description": "A Zettle integration for WooCommerce.",
-    "type": "project",
-    "license": "GPL2",
-    "autoload": {
-        "psr-4": {
-            "Zettle\\": "src/"
-        },
-        "files": [
-            "functions.php"
-        ]
+  "name": "hbackman/woocommerce-zettle",
+  "type": "project",
+  "description": "A Zettle integration for WooCommerce.",
+  "license": "GPL2",
+  "authors": [{
+    "name": "Maja Backman",
+    "email": "maja@hbackman.com"
+  }, {
+    "name": "ydgcam"
+  }],
+  "scripts": {
+    "test": "docker compose exec wordpress bash -c 'cd wp-content/plugins/woocommerce-zettle && vendor/bin/phpunit'"
+  },
+  "autoload": {
+    "psr-4": {
+      "Zettle\\": "src/"
     },
-    "autoload-dev": {
-        "psr-4": {
-            "Zettle\\Test\\": "tests/"
-        }
-    },
-    "authors": [{
-       "name": "Maja Backman",
-        "email": "maja@hbackman.com"
-    }, {
-        "name": "ydgcam"
-    }],
-    "require": {
-        "php": "^7.4",
-        "ext-json": "*",
-        "ext-curl": "*",
-        "ramsey/uuid": "^4.2",
-        "webmozart/assert": "^1.11"
-    },
-    "require-dev": {
-        "wp-cli/wp-cli": "*",
-        "symfony/var-dumper": "^5.4",
-        "phpunit/phpunit": "^9.5"
-    },
-    "scripts": {
-        "test": "vendor/bin/phpunit tests"
+    "files": [
+      "functions.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Zettle\\Test\\": "tests/"
     }
+  },
+  "require": {
+    "php": "^7.4",
+    "ext-json": "*",
+    "ext-curl": "*",
+    "ramsey/uuid": "^4.2",
+    "webmozart/assert": "^1.11"
+  },
+  "require-dev": {
+    "wp-cli/wp-cli": "*",
+    "symfony/var-dumper": "^5.4",
+    "phpunit/phpunit": "^9.5"
+  }
 }

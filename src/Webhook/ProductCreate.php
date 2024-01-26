@@ -5,7 +5,6 @@ use Webmozart\Assert\Assert;
 use Zettle\Support\Arr;
 use WC_Product_Simple;
 use WC_Product_Variable;
-use WC_Data_Exception;
 use WC_Product_Attribute;
 use WC_Product_Variation;
 
@@ -21,24 +20,14 @@ class ProductCreate extends Webhook
      */
     public function handle(Request $request)
     {
-        [$payload, $message] = $this->unpack($request);
-
-        // Log the event.
-
-        $log = sprintf("%s - %s",
-            $message["name"],
-            $payload["uuid"]
-        );
-
-        wc_get_logger()->info($log, [
-            "source" => "woocommerce-zettle",
-        ]);
+        [$payload] = $this->unpack($request);
 
         // Create the product.
 
-        $product = $this->zettle->get_product(Arr::get($payload, "uuid"));
+        $product_uuid = Arr::get($payload, "uuid");
+        $product_data = $this->zettle->get_product($product_uuid);
 
-        $this->create_product($product);
+        $this->create_product($product_data);
     }
 
     /**
@@ -59,16 +48,20 @@ class ProductCreate extends Webhook
     {
         // Validate
 
+        Assert::notEmpty($uuid  = Arr::get($data, "uuid"));
         Assert::notEmpty($title = Arr::get($data, "name"));
         Assert::notEmpty($sku   = Arr::get($data, "variants.0.sku"));
         Assert::notEmpty($price = Arr::get($data, "variants.0.price.amount"));
 
         // Insert
 
+        if (wc_get_product_id_by_zettle_uuid($uuid)) {
+            $this->error("zettle_product_id_already_in_use", $uuid);
+            return;
+        }
+
         if (wc_get_product_id_by_sku($sku)) {
-            wc_get_logger()->error("Zettle: product_invalid_sku ($sku)", [
-                "source" => "woocommerce-zettle",
-            ]);
+            $this->error("zettle_product_sku_already_in_use", $uuid);
             return;
         }
 
@@ -82,11 +75,21 @@ class ProductCreate extends Webhook
         $product->set_regular_price($price);
 
         $product->save();
+
+        // After the product is created, store the zettle uuid in the post meta
+        // so that the plugin can look it up later.
+        update_post_meta($product->get_id(), "zettle_uuid", $uuid);
     }
 
     private function create_product_variable(array $data): void
     {
+        Assert::notEmpty($uuid = Arr::get($data, "uuid"));
         Assert::notEmpty($name = Arr::get($data, "name"));
+
+        if (wc_get_product_id_by_zettle_uuid($uuid)) {
+            $this->error("zettle_product_id_already_in_use", $uuid);
+            return;
+        }
 
         // Product
         $product = new WC_Product_Variable();
@@ -95,8 +98,8 @@ class ProductCreate extends Webhook
         $product->set_name($name);
 
         // Attributes
-        $attr = Arr::get($data, "variantOptionDefinitions.definitions", []);
-        $attr = Arr::map($attr, function ($attr) {
+        $attributes = Arr::get($data, "variantOptionDefinitions.definitions", []);
+        $attributes = Arr::map($attributes, function ($attr) {
             $attribute = new WC_Product_Attribute();
 
             $name = Arr::get($attr, "name");
@@ -112,8 +115,12 @@ class ProductCreate extends Webhook
             return $attribute;
         });
 
-        $product->set_attributes($attr);
+        $product->set_attributes($attributes);
         $product->save();
+
+        // After the product is created, store the zettle uuid in the post meta
+        // so that the plugin can look it up later.
+        update_post_meta($product->get_id(), "zettle_uuid", $uuid);
 
         // Variations
         foreach (Arr::get($data, "variants", []) as $variant) {
@@ -121,12 +128,19 @@ class ProductCreate extends Webhook
             $sku   = Arr::get($variant, "sku");
             $price = Arr::get($variant, "price");
 
-            if (wc_get_product_id_by_sku($sku)) {
-                wc_get_logger()->error("Zettle: product_invalid_sku ($sku)", [
-                    "source" => "woocommerce-zettle",
-                ]);
+            // Validate
+
+            if (wc_get_product_id_by_zettle_uuid($uuid)) {
+                $this->error("zettle_variant_id_already_in_use", $uuid);
                 continue;
             }
+
+            if (wc_get_product_id_by_sku($sku)) {
+                $this->error("zettle_variant_sku_already_in_use", $uuid);
+                continue;
+            }
+
+            // Insert
 
             $variation = new WC_Product_Variation();
             $variation->set_parent_id($product->get_id());
@@ -148,6 +162,10 @@ class ProductCreate extends Webhook
 
             $variation->set_attributes($options);
             $variation->save();
+
+            // After the variation is created, store the zettle uuid in the post meta
+            // so that the plugin can look it up later.
+            update_post_meta($variation->get_id(), "zettle_uuid", $uuid);
         }
     }
 }

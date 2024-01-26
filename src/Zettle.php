@@ -8,6 +8,7 @@ use WP_HTTP_Requests_Response;
 use WP_Error;
 use Zettle\Support\Arr;
 use Exception;
+use Zettle\Support\JsonResponse;
 
 class Zettle
 {
@@ -53,15 +54,14 @@ class Zettle
         $response = $this->json_request("POST", $this->get_endpoint("pusher")."/subscriptions", $payload);
 
         if (false == $this->is_successful($response)) {
-            // TODO: Print notice.
+            Plugin::instance()->panic();
 
             return;
-            // Plugin::instance()->panic();
+
+            // TODO: Print notice.
         }
 
-        $this->set_signing_key(
-            Arr::get($response->get_data(), "signingKey", "")
-        );
+        $this->set_signing_key($response->json("signingKey"));
     }
 
     /**
@@ -71,11 +71,10 @@ class Zettle
     {
         $response = $this->json_request("GET", $this->get_endpoint("pusher")."/subscriptions");
 
-        if (false == $this->is_successful($response)) {
+        if (false == $this->is_successful($response))
             return;
-        }
 
-        $webhooks = $response->get_data();
+        $webhooks = $response->json();
         $webhooks = Arr::pluck($webhooks, "uuid");
 
         foreach ($webhooks as $uuid) {
@@ -93,7 +92,7 @@ class Zettle
         if (false == $this->is_successful($response))
             return null;
 
-        return (array) $response->get_data();
+        return $response->json();
     }
 
     /**
@@ -112,7 +111,7 @@ class Zettle
         string $method,
         string $url,
         ?array $payload = null
-    ): WP_HTTP_Requests_Response
+    ): JsonResponse
     {
         if ($payload) {
             $payload = json_encode($payload);
@@ -122,7 +121,7 @@ class Zettle
             "body"    => $payload,
             "method"  => $method,
             "headers" => [
-                "Authorization"  => "Bearer ".Plugin::instance()->get_zettle_token(),
+                "Authorization"  => "Bearer ".Plugin::instance()->get_zettle_access_token(),
                 "Content-Type"   => "application/json",
                 "Content-Length" => strlen($payload),
             ],
@@ -131,12 +130,6 @@ class Zettle
         if ($response instanceof WP_Error)
             throw new Exception("Response returned error.");
 
-        $response = $response["http_response"];
-
-        /** @var WP_HTTP_Requests_Response $response */
-
-        $response->set_data(json_decode($response->get_data(), true));
-
-        return $response;
+        return JsonResponse::create($response["http_response"]);
     }
 }

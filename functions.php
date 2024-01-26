@@ -64,3 +64,26 @@ if (! function_exists("z_header_map")) {
         return $output;
     }
 }
+
+if (! function_exists("wc_get_product_id_by_zettle_uuid")) {
+    /**
+     * Get product ID by Zettle UUID.
+     */
+    function wc_get_product_id_by_zettle_uuid(string $uuid): ?int
+    {
+        global $wpdb;
+
+        $sql = <<<SQL
+SELECT
+    postmeta.post_id
+FROM $wpdb->postmeta as postmeta
+WHERE
+    postmeta.meta_key = 'zettle_uuid'
+AND postmeta.meta_value = %s
+SQL;
+
+        $id = $wpdb->get_var($wpdb->prepare($sql, $uuid));
+
+        return $id;
+    }
+}

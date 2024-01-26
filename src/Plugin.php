@@ -4,7 +4,9 @@ namespace Zettle;
 defined("ABSPATH") or exit;
 
 use Automattic\Jetpack\Constants;
+use Webmozart\Assert\Assert;
 use Zettle\Admin\Settings;
+use Zettle\Support\Arr;
 use Zettle\Support\Jwt;
 use Zettle\Webhook\ProductCreate;
 use Zettle\Webhook\Request;
@@ -46,72 +48,93 @@ class Plugin
     }
 
     /**
+     * Check the plugin connection status.
+     */
+    public function is_connected(): bool
+    {
+        return $this->get_zettle_client_id() &&
+               $this->get_zettle_client_secret();
+    }
+
+    /**
      * Disable the plugin if something goes very wrong.
      */
     public function panic(): void
     {
         if (Constants::get_constant("WP_DEBUG")) {
             dd("panic", debug_backtrace());
-            dd(debug_backtrace());
         }
 
         z_plugin_disable(ZETTLE_PLUGIN);
-
-        update_option("zettle_token", null);
-        update_option("vendor_token", null);
     }
 
     /**
-     * Retrieve the zettle token.
+     * Retrieve the Zettle access token.
      */
-    public function get_zettle_token(): ?string
+    public function get_zettle_access_token(): ?string
     {
-        if (! get_option("vendor_token"))
+        // If the plugin is not connected, then the token will not exist. There is no
+        // need for a notice here as the caller should handle failures.
+        if (false == $this->is_connected())
             return null;
 
         try {
-            $token = get_option("zettle_token");
+            $token = get_option("wc_zettle_token");
             $token = Jwt::parse($token);
         }
         catch (InvalidArgumentException $e) {
             // If the token fails to parse, remove it from storage. This requires the
             // plugin to ask for a new token, which should fix the problem.
-            update_option("zettle_token", $token = null);
+            update_option("wc_zettle_token", $token = null);
         }
 
         try {
-            $isExpired = $token && $token->isExpired();
+            $is_missing = $token == null;
+            $is_expired = $token && $token->isExpired();
 
-            if ($isExpired) {
-                $token = $this->refresh_token();
-                $token = Jwt::parse($token);
-            }
+            if ($is_expired || $is_missing)
+                $token = Jwt::parse($this->refresh_access_token());
         }
         catch (InvalidArgumentException $e) {
             // If the refresh fails, then reset both the zettle and vendor token
             // and show a notice for the user to reconnect.
-
             $this->panic();
 
             // TODO: Notice
-
             return null;
         }
 
-        return $token->getToken();
+        return $token ? $token->getToken() : null;
     }
 
     /**
-     * Request a new token from the token service.
+     * Retrieve the Zettle integration client id.
      */
-    private function refresh_token(): ?string
+    public function get_zettle_client_id(): ?string
     {
-        $payload = [
-            "customer_id"    => $this->get_customer_id(),
-            "customer_token" => $this->get_customer_token(),
-        ];
+        return get_option("wc_zettle_client_id");
+    }
 
-        $response = wp_remote_post("http://host.docker.internal:5010/refresh", ["body" => $payload]);
+    /**
+     * Retrieve the Zettle integration client secret.
+     */
+    public function get_zettle_client_secret(): ?string
+    {
+        return get_option("wc_zettle_client_secret");
+    }
+
+    /**
+     * Request a new Zettle access token.
+     */
+    private function refresh_access_token(): ?string
+    {
+        $payload = ["body" => [
+            "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            "client_id"  => $this->get_zettle_client_id(),
+            "assertion"  => $this->get_zettle_client_secret(),
+        ]];
+
+        $response = wp_remote_post("https://oauth.zettle.com/token", $payload);
         $response = $response["http_response"];
 
         if ($response->get_status() != 200)
@@ -120,23 +143,7 @@ class Plugin
         $payload = $response->get_data();
         $payload = json_decode($payload, true);
 
-        return (string) $payload["zettle_token"];
-    }
-
-    /**
-     * Retrieve the customer id.
-     */
-    public function get_customer_id(): string
-    {
-        return get_bloginfo('admin_email');
-    }
-
-    /**
-     * Retrieve the customer token.
-     */
-    public function get_customer_token(): ?string
-    {
-        return get_option("vendor_token");
+        return (string) Arr::get($payload, "access_token");
     }
 
     /**
@@ -144,7 +151,7 @@ class Plugin
      */
     public function get_webhook_url(): string
     {
-        return "https://7571-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
+        return "https://ca1d-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
     }
 
     /**
@@ -199,7 +206,7 @@ class Plugin
     /**
      * Retrieve the plugin instance.
      */
-    public static function instance(): static
+    public static function instance(): self
     {
         if (self::$instance === null)
             self::$instance = new self();
