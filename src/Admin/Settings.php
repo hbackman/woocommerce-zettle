@@ -4,7 +4,6 @@ namespace Zettle\Admin;
 defined("ABSPATH") or exit;
 
 use WC_Settings_Page;
-use WC_Admin_Settings;
 use Zettle\Plugin;
 
 class Settings extends WC_Settings_Page
@@ -15,6 +14,49 @@ class Settings extends WC_Settings_Page
         $this->label = "Zettle";
 
         parent::__construct();
+
+        add_action("woocommerce_admin_field_button", [$this, "button"]);
+
+        $this->check_for_rebuild_webhooks();
+    }
+
+    private function check_for_rebuild_webhooks()
+    {
+        if (! array_key_exists("rebuild_webhooks", $_GET))
+            return;
+
+        // The easiest way to build webhooks is to let the plugin trigger the
+        // activation again..
+        do_action("zettle_connected");
+
+        // Redirect back to the regular url to avoid the user from refreshing
+        // hooks by coming back to the page.
+        wp_redirect($this->get_url());
+    }
+
+    /**
+     * Retrieve the settings page url.
+     */
+    private function get_url(): string
+    {
+        return  admin_url("admin.php?page=wc-settings&tab=".esc_attr($this->id));
+    }
+
+    /**
+     * Settings form button.
+     */
+    public function button(array $options): void
+    {
+        ?><tr valign="top">
+            <th scope="row" class="titledesc">
+                <?php echo $options["title"] ?? ""; ?>
+            </th>
+            <td class="forminp">
+                <a href="<?php echo $options["href"] ?? ""; ?>" class="button-primary woocommerce-save-button">
+                    <?php echo $options["text"] ?? ""; ?>
+                </a>
+            </td>
+        </tr><?php
     }
 
     /**
@@ -22,6 +64,7 @@ class Settings extends WC_Settings_Page
      */
     public function get_settings(): array
     {
+        //wp_redirect($redirect);
         return apply_filters("woocommerce_{$this->id}_settings", [
             // -------------------------------------------------------------
             [
@@ -40,9 +83,15 @@ class Settings extends WC_Settings_Page
                 "id"    => "wc_zettle_client_secret",
             ],
             [
+                "title" => "Refresh Webhooks",
+                "type"  => "button",
+                "text"  => "Refresh",
+                "href"  => $this->get_url()."&rebuild_webhooks=1",
+            ],
+            [
                 "title" => "Access Token",
                 "type"  => "textarea",
-                "value" => get_option("zettle_token"),
+                "value" => get_option("wc_zettle_token"),
                 "custom_attributes" => [
                     "readonly" => "",
                     "rows"     => "5",
@@ -89,13 +138,5 @@ class Settings extends WC_Settings_Page
             if (!empty($client_id) && !empty($client_sc))
                 do_action("zettle_connected");
         }
-    }
-
-    /**
-     *	Output the settings.
-     */
-    public function output()
-    {
-        WC_Admin_Settings::output_fields($this->get_settings());
     }
 }

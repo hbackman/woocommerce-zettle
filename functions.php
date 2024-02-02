@@ -1,27 +1,5 @@
 <?php
 
-if (! function_exists("dd")) {
-    /**
-     * Die and dump.
-     */
-    function dd(...$args): void
-    {
-        foreach ($args as $arg)
-            echo "<pre>".print_r($arg, true)."</pre>";
-        die();
-    }
-}
-
-if (! function_exists("z_is_connected")) {
-    /**
-     * Check if Zettle is connected/
-     */
-    function z_is_connected(): bool
-    {
-        return get_option("zettle_token") && get_option("vendor_token");
-    }
-}
-
 if (! function_exists("z_plugin_enabled")) {
     /**
      * Check if a plugin is enabled.
@@ -50,21 +28,6 @@ if (! function_exists("z_plugin_disable")) {
     }
 }
 
-if (! function_exists("z_header_map")) {
-    /**
-     * Transforms a key value map into curl format.
-     */
-    function z_prepare_headers(array $headers): array
-    {
-        $output = [];
-
-        foreach ($headers as $key => $value)
-            $output[] = "$key: $value";
-
-        return $output;
-    }
-}
-
 if (! function_exists("wc_get_product_id_by_zettle_uuid")) {
     /**
      * Get product ID by Zettle UUID.
@@ -75,15 +38,28 @@ if (! function_exists("wc_get_product_id_by_zettle_uuid")) {
 
         $sql = <<<SQL
 SELECT
-    postmeta.post_id
-FROM $wpdb->postmeta as postmeta
-WHERE
-    postmeta.meta_key = 'zettle_uuid'
+    posts.ID
+FROM $wpdb->posts as posts
+JOIN $wpdb->postmeta as postmeta on
+    postmeta.post_id = posts.ID
+AND postmeta.meta_key = 'zettle_uuid'
 AND postmeta.meta_value = %s
 SQL;
 
         $id = $wpdb->get_var($wpdb->prepare($sql, $uuid));
 
         return $id;
+    }
+}
+
+if (! function_exists("wc_get_product_by_zettle_uuid")) {
+    /**
+     * Get a product by Zettle UUID.
+     *
+     * @return WC_Product|WC_Product_Variation|WC_Product_Simple|false
+     */
+    function wc_get_product_by_zettle_uuid(string $uuid)
+    {
+        return wc_get_product(wc_get_product_id_by_zettle_uuid($uuid));
     }
 }

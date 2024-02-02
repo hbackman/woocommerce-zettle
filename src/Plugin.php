@@ -4,11 +4,12 @@ namespace Zettle;
 defined("ABSPATH") or exit;
 
 use Automattic\Jetpack\Constants;
-use Webmozart\Assert\Assert;
 use Zettle\Admin\Settings;
 use Zettle\Support\Arr;
 use Zettle\Support\Jwt;
 use Zettle\Webhook\ProductCreate;
+use Zettle\Webhook\ProductDelete;
+use Zettle\Webhook\ProductUpdate;
 use Zettle\Webhook\Request;
 use Zettle\Webhook\TestMessage;
 use Zettle\Webhook\Webhook;
@@ -29,6 +30,8 @@ class Plugin
     private array $webhooks = [
         TestMessage::class,
         ProductCreate::class,
+        ProductUpdate::class,
+        ProductDelete::class,
     ];
 
     /**
@@ -143,7 +146,11 @@ class Plugin
         $payload = $response->get_data();
         $payload = json_decode($payload, true);
 
-        return (string) Arr::get($payload, "access_token");
+        $token = (string) Arr::get($payload, "access_token");
+
+        update_option("wc_zettle_token", $token);
+
+        return $token;
     }
 
     /**
@@ -151,7 +158,7 @@ class Plugin
      */
     public function get_webhook_url(): string
     {
-        return "https://ca1d-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
+        return "https://d459-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
     }
 
     /**

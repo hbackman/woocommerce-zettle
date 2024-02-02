@@ -46,8 +46,6 @@ class ProductCreate extends Webhook
 
     private function create_product_simple(array $data): void
     {
-        // Validate
-
         Assert::notEmpty($uuid  = Arr::get($data, "uuid"));
         Assert::notEmpty($title = Arr::get($data, "name"));
         Assert::notEmpty($sku   = Arr::get($data, "variants.0.sku"));
@@ -94,10 +92,51 @@ class ProductCreate extends Webhook
         // Product
         $product = new WC_Product_Variable();
         $product->set_status("publish");
-
         $product->set_name($name);
 
         // Attributes
+        $attributes = $this->make_product_attributes($data);
+
+        // Before we create variants, we need to ensure that the product exists.
+        $product->set_attributes($attributes);
+        $product->save();
+
+        // After the product is created, store the zettle uuid in the post meta
+        // so that the plugin can look it up later.
+        update_post_meta($product->get_id(), "zettle_uuid", $uuid);
+
+        // Variations
+        foreach (Arr::get($data, "variants", []) as $variant) {
+            $uuid = Arr::get($variant, "uuid");
+            $sku  = Arr::get($variant, "sku");
+
+            // Validate
+            if (wc_get_product_id_by_zettle_uuid($uuid)) {
+                $this->error("zettle_variant_id_already_in_use", $uuid);
+                continue;
+            }
+
+            if ($sku) {
+                if (wc_get_product_id_by_sku($sku)) {
+                    $this->error("zettle_variant_sku_already_in_use", $sku);
+                    continue;
+                }
+            }
+
+            // Insert
+            $variation = $this->create_product_variant($variant);
+
+            $variation->set_parent_id($product->get_id());
+            $variation->save();
+
+            // After the variation is created, store the zettle uuid in the post meta
+            // so that the plugin can look it up later.
+            update_post_meta($variation->get_id(), "zettle_uuid", $uuid);
+        }
+    }
+
+    private function make_product_attributes(array $data): array
+    {
         $attributes = Arr::get($data, "variantOptionDefinitions.definitions", []);
         $attributes = Arr::map($attributes, function ($attr) {
             $attribute = new WC_Product_Attribute();
@@ -115,57 +154,39 @@ class ProductCreate extends Webhook
             return $attribute;
         });
 
-        $product->set_attributes($attributes);
-        $product->save();
+        return $attributes;
+    }
 
-        // After the product is created, store the zettle uuid in the post meta
-        // so that the plugin can look it up later.
-        update_post_meta($product->get_id(), "zettle_uuid", $uuid);
+    private function create_product_variant(array $data): WC_Product_Variation
+    {
+        $title = Arr::get($data, "name");
+        $sku   = Arr::get($data, "sku");
+        $price = Arr::get($data, "price.amount");
 
-        // Variations
-        foreach (Arr::get($data, "variants", []) as $variant) {
-            $title = Arr::get($variant, "uuid");
-            $sku   = Arr::get($variant, "sku");
-            $price = Arr::get($variant, "price");
+        $variant = new WC_Product_Variation();
 
-            // Validate
+        $price /= 100;
 
-            if (wc_get_product_id_by_zettle_uuid($uuid)) {
-                $this->error("zettle_variant_id_already_in_use", $uuid);
-                continue;
-            }
+        $variant->set_name($title);
+        $variant->set_sku($sku);
+        $variant->set_regular_price($price);
 
-            if (wc_get_product_id_by_sku($sku)) {
-                $this->error("zettle_variant_sku_already_in_use", $uuid);
-                continue;
-            }
-
-            // Insert
-
-            $variation = new WC_Product_Variation();
-            $variation->set_parent_id($product->get_id());
-
-            $price /= 100;
-
-            $variation->set_name($title);
-            $variation->set_sku($sku);
-            $variation->set_regular_price($price);
-
-            $options = [];
-
-            foreach (Arr::get($variant, "options") as $option) {
-                $name  = Arr::get($option, "name");
-                $value = Arr::get($option, "value");
-
-                $options[wc_attribute_taxonomy_slug($name)] = $value;
-            }
-
-            $variation->set_attributes($options);
-            $variation->save();
-
-            // After the variation is created, store the zettle uuid in the post meta
-            // so that the plugin can look it up later.
-            update_post_meta($variation->get_id(), "zettle_uuid", $uuid);
+        // Enable stock management if sku is provided.
+        if ($sku) {
+            $variant->set_manage_stock(true);
         }
+
+        $options = [];
+
+        foreach (Arr::get($data, "options", []) as $option) {
+            $name  = Arr::get($option, "name");
+            $value = Arr::get($option, "value");
+
+            $options[wc_attribute_taxonomy_slug($name)] = $value;
+        }
+
+        $variant->set_attributes($options);
+
+        return $variant;
     }
 }
