@@ -7,6 +7,7 @@ use Automattic\Jetpack\Constants;
 use Zettle\Admin\Settings;
 use Zettle\Support\Arr;
 use Zettle\Support\Jwt;
+use Zettle\Webhook\InventoryBalanceChanged;
 use Zettle\Webhook\ProductCreate;
 use Zettle\Webhook\ProductDelete;
 use Zettle\Webhook\ProductUpdate;
@@ -28,6 +29,7 @@ class Plugin
      * @var class-string<Webhook>[]
      */
     private array $webhooks = [
+        InventoryBalanceChanged::class,
         TestMessage::class,
         ProductCreate::class,
         ProductUpdate::class,
@@ -158,7 +160,7 @@ class Plugin
      */
     public function get_webhook_url(): string
     {
-        return "https://d459-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
+        return "https://9315-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
     }
 
     /**

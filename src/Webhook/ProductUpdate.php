@@ -82,7 +82,7 @@ class ProductUpdate extends Webhook
         $variation = wc_get_product_by_zettle_uuid($uuid);
 
         if (! $variation) {
-            $this->error("zettle_product_id_not_found", $uuid);
+            $this->error("zettle_variant_id_not_found", $uuid);
             return null;
         }
 
