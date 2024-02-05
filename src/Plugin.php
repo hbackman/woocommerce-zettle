@@ -258,6 +258,21 @@ class Plugin
 
             return $a;
         });
+
+        add_filter("plugin_action_links", function ($actions, $file) {
+            // Check that the filter is applied for this plugin only.
+            if (str_contains(ZETTLE_PLUGIN, $file)) {
+                $actions = array_merge([
+                    "settings" => sprintf(
+                        '<a href="%s" aria-label="%s">%s</a>',
+                        admin_url("admin.php?page=wc-settings&tab=zettle"),
+                        esc_attr__("View Zettle settings", "wc_zettle"),
+                        esc_html__("Settings", "wc_zettle")
+                    ),
+                ], $actions);
+            }
+            return $actions;
+        }, 10, 2);
     }
 
     /**
