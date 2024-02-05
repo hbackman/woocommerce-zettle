@@ -24,7 +24,9 @@ class ProductUpdate extends Webhook
         // Update the product.
 
         $product_uuid = Arr::get($data, "uuid");
-        $product_data = $this->zettle->get_product($product_uuid);
+        $product_data = $this->plugin
+            ->zettle()
+            ->get_product($product_uuid);
 
         $this->update_product($product_data);
     }
@@ -39,7 +41,7 @@ class ProductUpdate extends Webhook
         $product = wc_get_product_by_zettle_uuid($uuid);
 
         if (! $product) {
-            $this->error("zettle_product_id_not_found", $uuid);
+            $this->plugin->logger()->error("zettle_product_id_not_found", $uuid);
             return;
         }
 
@@ -82,7 +84,7 @@ class ProductUpdate extends Webhook
         $variation = wc_get_product_by_zettle_uuid($uuid);
 
         if (! $variation) {
-            $this->error("zettle_variant_id_not_found", $uuid);
+            $this->plugin->logger()->error("zettle_variant_id_not_found", $uuid);
             return null;
         }
 

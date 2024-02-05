@@ -4,20 +4,181 @@ namespace Zettle;
 defined("ABSPATH") or exit;
 
 use Ramsey\Uuid\Uuid;
-use WP_HTTP_Requests_Response;
 use WP_Error;
 use Zettle\Support\Arr;
-use Exception;
 use Zettle\Support\JsonResponse;
+use Exception;
 
 class Zettle
 {
     /**
-     * Prepare the zettle api endpoint.
+     * The plugin instance.
      */
-    private function get_endpoint(string $domain): string
+    private Plugin $plugin;
+
+    const ENDPOINT_PUSHER    = "https://pusher.izettle.com/organizations/self";
+    const ENDPOINT_PRODUCTS  = "https://products.izettle.com/organizations/self";
+    const ENDPOINT_INVENTORY = "https://inventory.izettle.com/v3";
+
+    /**
+     * Zettle constructor.
+     */
+    public function __construct(Plugin $plugin)
     {
-        return "https://$domain.izettle.com/organizations/self";
+        $this->plugin = $plugin;
+    }
+
+    /**
+     * Set the stock quantity for a given variant uuid.
+     */
+    public function set_variant_stock(
+        string $product_uuid,
+        string $variant_uuid,
+        ?int   $variant_stock
+    ): bool
+    {
+        // If the variant is not tracking stock, then we do not need to update
+        // the Zettle stock.
+        if (is_null($variant_stock))
+            return true;
+
+        $stock = $this->get_product_stock(
+            $product_uuid,
+            $variant_uuid
+        );
+
+        // Calculate the difference between the local and remote inventory. When the
+        // diff is < 0, this means that we need to move from "store" to "sold". When
+        // it is > 0, we need to move from "sold" to "store".
+        $diff = $variant_stock - $stock;
+
+        return $this->apply_stock_diff(
+            $product_uuid,
+            $variant_uuid, $diff
+        );
+    }
+
+    /**
+     * Set the stock quantity for a given product uuid.
+     */
+    public function set_product_stock(
+        string $product_uuid,
+        ?int  $product_stock
+    ): bool
+    {
+        // If the product is not tracking stock, then we do not need to update
+        // the Zettle stock.
+        if (is_null($product_stock))
+            return true;
+
+        $stock = $this->get_product_stock(
+            $product_uuid,
+            $variant_uuid
+        );
+
+        // Calculate the difference between the local and remote inventory. When the
+        // diff is < 0, this means that we need to move from "store" to "sold". When
+        // it is > 0, we need to move from "sold" to "store".
+        $diff = $product_stock - $stock;
+
+        return $this->apply_stock_diff(
+            $product_uuid,
+            $variant_uuid, $diff
+        );
+    }
+
+    /**
+     * Applies a stock diff to the store inventory.
+     */
+    private function apply_stock_diff(
+        string $product_uuid,
+        string $variant_uuid,
+        int    $diff
+    ): bool
+    {
+        // If the difference is zero, then nothing has been moved.
+        if ($diff == 0)
+            return true;
+
+        $inventory_store = get_option("wc_zettle_inventory_store");
+        $inventory_sold  = get_option("wc_zettle_inventory_sold");
+
+        $payload = ["movements" => [[
+            "productUuid" => $product_uuid,
+            "variantUuid" => $variant_uuid,
+            "change"      => abs($diff),
+            "from"        => $diff > 0 ? $inventory_sold : $inventory_store,
+            "to"          => $diff > 0 ? $inventory_store : $inventory_sold,
+        ]]];
+
+        $endpoint = self::ENDPOINT_INVENTORY."/movements";
+        $response = $this->json_request("POST", $endpoint, $payload);
+
+        if (false == $response->is_successful()) {
+            $this->plugin->logger()->error(
+                "Could not update product stock.",
+                $product_uuid,
+                $variant_uuid,
+            );
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Retrieve stock for a product or variant.
+     *
+     * This uses a reference for $variant_uuid to fill that when not provided.
+     */
+    public function get_product_stock(
+        string  $product_uuid,
+        ?string &$variant_uuid = null
+    ): ?int
+    {
+        $inv_uuid = get_option("wc_zettle_inventory_store");
+
+        $endpoint = self::ENDPOINT_INVENTORY."/stock/$inv_uuid/products/$product_uuid";
+        $response = $this->json_request("GET", $endpoint);
+
+        if (false == $response->is_successful()) {
+            $this->plugin->logger()->error(
+                "Could not retrieve product stock.",
+                $product_uuid,
+                $variant_uuid
+            );
+        }
+
+        $list = $response->json();
+        $item = $variant_uuid === null
+            ? Arr::first($list, "productUuid", "=", $product_uuid)
+            : Arr::first($list, "variantUuid", "=", $variant_uuid);
+
+        if (($stock = Arr::get($item, "balance")) !== null)
+            $stock = (int)$stock;
+        else {
+            // I am not sure that this could actually happen. The event should not be
+            // emitted, the request should 404, etc. But let's check this anyway just
+            // in case.
+            return null;
+        }
+
+        $variant_uuid = Arr::get($item, "variantUuid");
+
+        return $stock;
+    }
+
+    /**
+     * Retrieve a product by its uuid.
+     */
+    public function get_product(string $uuid): ?array
+    {
+        $response = $this->json_request("GET", self::ENDPOINT_PRODUCTS."/products/$uuid");
+
+        if (false == $response->is_successful())
+            return null;
+
+        return $response->json();
     }
 
     /**
@@ -51,9 +212,9 @@ class Zettle
             "eventNames"    => $events,
         ];
 
-        $response = $this->json_request("POST", $this->get_endpoint("pusher")."/subscriptions", $payload);
+        $response = $this->json_request("POST", self::ENDPOINT_PUSHER."/subscriptions", $payload);
 
-        if (false == $this->is_successful($response)) {
+        if (false == $response->is_successful()) {
             Plugin::instance()->panic();
 
             return;
@@ -69,39 +230,17 @@ class Zettle
      */
     public function delete_pusher_subscription(): void
     {
-        $response = $this->json_request("GET", $this->get_endpoint("pusher")."/subscriptions");
+        $response = $this->json_request("GET", self::ENDPOINT_PUSHER."/subscriptions");
 
-        if (false == $this->is_successful($response))
+        if (false == $response->is_successful())
             return;
 
         $webhooks = $response->json();
         $webhooks = Arr::pluck($webhooks, "uuid");
 
         foreach ($webhooks as $uuid) {
-            $this->json_request("DELETE", $this->get_endpoint("pusher")."/subscriptions/$uuid");
+            $this->json_request("DELETE", self::ENDPOINT_PUSHER."/subscriptions/$uuid");
         }
-    }
-
-    /**
-     * Retrieve a product by its uuid.
-     */
-    public function get_product(string $uuid): ?array
-    {
-        $response = $this->json_request("GET", $this->get_endpoint("products")."/products/$uuid");
-
-        if (false == $this->is_successful($response))
-            return null;
-
-        return $response->json();
-    }
-
-    /**
-     * Return whether the request was successful.
-     */
-    private function is_successful(WP_HTTP_Requests_Response $response): bool
-    {
-        return $response->get_status() >= 200 &&
-               $response->get_status() <= 299;
     }
 
     /**

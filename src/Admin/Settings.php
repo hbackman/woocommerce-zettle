@@ -5,11 +5,19 @@ defined("ABSPATH") or exit;
 
 use WC_Settings_Page;
 use Zettle\Plugin;
+use Zettle\Support\Arr;
 
 class Settings extends WC_Settings_Page
 {
-    public function __construct()
+    /**
+     * The plugin instance.
+     */
+    private Plugin $plugin;
+
+    public function __construct(Plugin $plugin)
     {
+        $this->plugin = $plugin;
+
         $this->id    = "zettle";
         $this->label = "Zettle";
 
@@ -39,7 +47,7 @@ class Settings extends WC_Settings_Page
      */
     private function get_url(): string
     {
-        return  admin_url("admin.php?page=wc-settings&tab=".esc_attr($this->id));
+        return admin_url("admin.php?page=wc-settings&tab=".esc_attr($this->id));
     }
 
     /**
@@ -64,55 +72,81 @@ class Settings extends WC_Settings_Page
      */
     public function get_settings(): array
     {
-        //wp_redirect($redirect);
-        return apply_filters("woocommerce_{$this->id}_settings", [
-            // -------------------------------------------------------------
-            [
-                "title" => __("Zettle Settings", "wc_zettle"),
-                "type"  => "title",
-                "id"    => "wc_zettle_auth",
+        $fields = [];
+        $fields[] = [
+            "title" => __("Zettle Settings", "wc_zettle"),
+            "type"  => "title",
+        ];
+
+        // ZETTLE AUTH -------------------------------------------------
+
+        $fields[] = [
+            "title" => "Client ID",
+            "type"  => "text",
+            "id"    => "wc_zettle_client_id",
+        ];
+        $fields[] = [
+            "title" => "API-key",
+            "type"  => "text",
+            "id"    => "wc_zettle_client_secret",
+        ];
+        $fields[] = [
+            "title" => "Access Token",
+            "type"  => "textarea",
+            "value" => $this->plugin->get_zettle_access_token(),
+            "custom_attributes" => [
+                "readonly" => "",
+                "rows"     => "5",
             ],
-            [
-                "title" => "Client ID",
-                "type"  => "text",
-                "id"    => "wc_zettle_client_id",
-            ],
-            [
-                "title" => "API-key",
-                "type"  => "text",
-                "id"    => "wc_zettle_client_secret",
-            ],
-            [
-                "title" => "Refresh Webhooks",
-                "type"  => "button",
-                "text"  => "Refresh",
-                "href"  => $this->get_url()."&rebuild_webhooks=1",
-            ],
-            [
-                "title" => "Access Token",
-                "type"  => "textarea",
-                "value" => get_option("wc_zettle_token"),
-                "custom_attributes" => [
-                    "readonly" => "",
-                    "rows"     => "5",
-                ],
-            ],
-            //[
-            //    "title" => __("Client ID", "wc_zettle"),
-            //    "type"  => "text",
-            //    "id"    => "wc_zettle_client_id",
-            //],
-            //[
-            //    "title" => __("Client Secret", "wc_zettle"),
-            //    "type"  => "text",
-            //    "id"    => "wc_zettle_client_secret",
-            //],
-            [
-                "type"  => "sectionend",
-                "id"    => "wc_zettle_auth_end",
-            ],
-            // -------------------------------------------------------------
-        ]);
+        ];
+        $fields[] = [
+            "type" => "sectionend",
+        ];
+
+        // WEBHOOKS ----------------------------------------------------
+
+        $fields[] = [
+            "title" => __("Webhooks", "wc_zettle"),
+            "type"  => "title",
+        ];
+        $fields[] = [
+            "title" => "URL",
+            "type"  => "text",
+            "id"    => "wc_zettle_webhook_url",
+        ];
+        $fields[] = [
+            "title" => "Refresh",
+            "type"  => "button",
+            "text"  => "Refresh",
+            "href"  => $this->get_url()."&rebuild_webhooks=1",
+        ];
+        $fields[] = [
+            "type" => "sectionend",
+        ];
+
+        // Inventory ---------------------------------------------------
+
+        $fields[] = [
+            "title" => __("Inventory", "wc_zettle"),
+            "type"  => "title",
+        ];
+        $fields[] = [
+            "title" => "Inventory UUID - Store",
+            "type"  => "text",
+            "id"    => "wc_zettle_inventory_store",
+        ];
+        $fields[] = [
+            "title" => "Inventory UUID - Sold",
+            "type"  => "text",
+            "id"    => "wc_zettle_inventory_sold",
+        ];
+        $fields[] = [
+            "type" => "sectionend",
+        ];
+
+        // -------------------------------------------------------------
+
+        return apply_filters("woocommerce_{$this->id}_settings", $fields);
     }
 
     /**

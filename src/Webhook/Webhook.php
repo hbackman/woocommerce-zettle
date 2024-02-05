@@ -1,15 +1,15 @@
 <?php
 namespace Zettle\Webhook;
 
+use Zettle\Plugin;
 use Zettle\Support\Arr;
-use Zettle\Zettle;
 
 abstract class Webhook
 {
     /**
      * The Zettle instance.
      */
-    protected Zettle $zettle;
+    protected Plugin $plugin;
 
     /**
      * The webhook event name.
@@ -19,9 +19,9 @@ abstract class Webhook
     /**
      * Webhook constructor.
      */
-    public function __construct(Zettle $zettle)
+    public function __construct(Plugin $plugin)
     {
-        $this->zettle = $zettle;
+        $this->plugin = $plugin;
     }
 
     /**
@@ -45,17 +45,6 @@ abstract class Webhook
         $payload = Arr::get($request, "payload");
         $payload = json_decode($payload, true);
 
-        return [$payload, $message,];
-    }
-
-    /**
-     * Report an error.
-     */
-    protected function error(string $code, ...$args): void
-    {
-        $message = "$code (".implode(",", $args).")";
-        $context = ["source" => "woocommerce-zettle"];
-
-        wc_get_logger()->error($message, $context);
+        return [$payload, $message];
     }
 }

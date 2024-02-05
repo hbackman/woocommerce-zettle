@@ -25,7 +25,9 @@ class ProductCreate extends Webhook
         // Create the product.
 
         $product_uuid = Arr::get($payload, "uuid");
-        $product_data = $this->zettle->get_product($product_uuid);
+        $product_data = $this->plugin
+            ->zettle()
+            ->get_product($product_uuid);
 
         $this->create_product($product_data);
     }
@@ -48,18 +50,19 @@ class ProductCreate extends Webhook
     {
         Assert::notEmpty($uuid  = Arr::get($data, "uuid"));
         Assert::notEmpty($title = Arr::get($data, "name"));
-        Assert::notEmpty($sku   = Arr::get($data, "variants.0.sku"));
-        Assert::notEmpty($price = Arr::get($data, "variants.0.price.amount"));
+
+        $sku   = Arr::get($data, "variants.0.sku");
+        $price = Arr::get($data, "variants.0.price.amount");
 
         // Insert
 
         if (wc_get_product_id_by_zettle_uuid($uuid)) {
-            $this->error("zettle_product_id_already_in_use", $uuid);
+            $this->plugin->logger()->error("zettle_product_id_already_in_use", $uuid);
             return;
         }
 
         if (wc_get_product_id_by_sku($sku)) {
-            $this->error("zettle_product_sku_already_in_use", $uuid);
+            $this->plugin->logger()->error("zettle_product_sku_already_in_use", $sku);
             return;
         }
 
@@ -85,7 +88,7 @@ class ProductCreate extends Webhook
         Assert::notEmpty($name = Arr::get($data, "name"));
 
         if (wc_get_product_id_by_zettle_uuid($uuid)) {
-            $this->error("zettle_product_id_already_in_use", $uuid);
+            $this->plugin->logger()->error("zettle_product_id_already_in_use", $uuid);
             return;
         }
 
@@ -112,13 +115,13 @@ class ProductCreate extends Webhook
 
             // Validate
             if (wc_get_product_id_by_zettle_uuid($uuid)) {
-                $this->error("zettle_variant_id_already_in_use", $uuid);
+                $this->plugin->logger()->error("zettle_variant_id_already_in_use", $uuid);
                 continue;
             }
 
             if ($sku) {
                 if (wc_get_product_id_by_sku($sku)) {
-                    $this->error("zettle_variant_sku_already_in_use", $sku);
+                    $this->plugin->logger()->error("zettle_variant_sku_already_in_use", $sku);
                     continue;
                 }
             }
@@ -170,11 +173,6 @@ class ProductCreate extends Webhook
         $variant->set_name($title);
         $variant->set_sku($sku);
         $variant->set_regular_price($price);
-
-        // Enable stock management if sku is provided.
-        if ($sku) {
-            $variant->set_manage_stock(true);
-        }
 
         $options = [];
 

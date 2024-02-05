@@ -15,6 +15,8 @@ class InventoryBalanceChanged extends Webhook
      */
     public function handle(Request $request)
     {
+        $this->productCreateRaceFix();
+
         [$payload] = $this->unpack($request);
 
         // Zettle will send a list of inventory "events", each containing the stock
@@ -33,13 +35,16 @@ class InventoryBalanceChanged extends Webhook
             $variant = wc_get_product_by_zettle_uuid($variant_uuid);
 
             if (! $product) {
-                $this->error("zettle_product_id_not_found", $product_uuid);
+                $this->plugin
+                    ->logger()
+                    ->error("zettle_product_id_not_found", $product_uuid);
                 continue;
             }
 
             if ($product->get_type() == "simple") {
                 // If the product does not have stock management enabled, then
                 // it needs to be enabled before the stock is set.
+
                 if (false == $product->managing_stock()) {
                     $product->set_manage_stock(true);
                     $product->save();
@@ -62,5 +67,15 @@ class InventoryBalanceChanged extends Webhook
             // No other types than the ones above are supported by this plugin
             // yet. I don't think Zettle supports external or grouped products.
         }
+    }
+
+    private function productCreateRaceFix(): void
+    {
+        // When creating a product, this webhook is fired almost immediately. This
+        // means that the product might not be created yet. Normally this would be
+        // solved by using a queue. But for now, lets sleep for 2s (Zettle is nice
+        // enough to give us 10s to process the request).
+
+        sleep(2);
     }
 }

@@ -24,11 +24,9 @@ class ProductDelete extends Webhook
         $prid = wc_get_product_id_by_zettle_uuid($uuid);
 
         if (null == $prid) {
-            $this->error("zettle_product_id_not_found", $uuid);
+            $this->plugin->logger()->error("zettle_product_id_not_found", $uuid);
             return;
         }
-
-        $product = new WC_Product($prid);
 
         wc_update_product_stock($prid, 0);
     }

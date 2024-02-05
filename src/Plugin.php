@@ -42,11 +42,19 @@ class Plugin
     private Zettle $zettle;
 
     /**
+     * The logger instance.
+     */
+    private Logger $logger;
+
+    /**
      * Initialize the plugin.
      */
     public function init(): void
     {
-        $this->zettle = new Zettle();
+        $this->zettle = new Zettle($this);
+        $this->logger = new Logger();
+
+        new StockEvents($this);
 
         $this->init_webhooks();
         $this->init_settings();
@@ -59,6 +67,22 @@ class Plugin
     {
         return $this->get_zettle_client_id() &&
                $this->get_zettle_client_secret();
+    }
+
+    /**
+     * Retrieve the logger instance.
+     */
+    public function logger(): Logger
+    {
+        return $this->logger;
+    }
+
+    /**
+     * Retrieve the zettle instance.
+     */
+    public function zettle(): Zettle
+    {
+        return $this->zettle;
     }
 
     /**
@@ -158,9 +182,16 @@ class Plugin
     /**
      * Retrieve the url used for incoming webhooks.
      */
-    public function get_webhook_url(): string
+    public function get_webhook_url(): ?string
     {
-        return "https://9315-73-152-112-64.ngrok.io/wp-admin/admin-ajax.php?action=zettle_webhook";
+        $domain = get_option("wc_zettle_webhook_url");
+        $endpoint = "/wp-admin/admin-ajax.php?action=zettle_webhook";
+
+        if ($domain == null) {
+            $domain = get_site_url();
+        }
+
+        return "$domain$endpoint";
     }
 
     /**
@@ -179,7 +210,7 @@ class Plugin
 
             // Invoke the hook if found.
             foreach ($this->webhooks as $hook) {
-                $hook = new $hook($this->zettle);
+                $hook = new $hook($this);
 
                 if ($hook->action == $webhook)
                     $hook->handle($request);
@@ -206,7 +237,7 @@ class Plugin
     private function init_settings(): void
     {
         add_filter("woocommerce_get_settings_pages", function ($a) {
-            new Settings();
+            new Settings($this);
 
             return $a;
         });

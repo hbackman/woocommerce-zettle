@@ -39,6 +39,15 @@ class JsonResponse extends WP_HTTP_Requests_Response
     }
 
     /**
+     * Checks if the response was successful.
+     */
+    public function is_successful(): bool
+    {
+        return $this->get_status() >= 200 &&
+               $this->get_status() <= 299;
+    }
+
+    /**
      * Extends/casts the given response into a JsonResponse.
      */
     public static function create(WP_HTTP_Requests_Response $response): self

@@ -1,6 +1,8 @@
 <?php
 namespace Zettle\Support;
 
+use InvalidArgumentException;
+
 class Arr
 {
     /**
@@ -77,5 +79,74 @@ class Arr
         return array_map(function (array $item) use ($key) {
             return self::get($item, $key);
         }, $array);
+    }
+
+    /**
+     * Filter an array based on a callable.
+     *
+     * @param array           $array
+     * @param string|callable $key
+     * @param string|null     $operator
+     * @param mixed           $value
+     *
+     * @return array
+     */
+    public static function where(array $array, $key, string $operator = null, $value = null): array
+    {
+        return array_values(array_filter(
+           $array, self::filterForWhere($key, $operator, $value)
+        ));
+    }
+
+    /**
+     * Search an array for the first matching record.
+     *
+     * @param array           $array
+     * @param string|callable $key
+     * @param string|null     $operator
+     * @param mixed           $value
+     *
+     * @return null|array
+     */
+    public static function first(array $array, $key, string $operator = null, $value = null): ?array
+    {
+        $callback = self::filterForWhere($key, $operator, $value);
+
+        foreach ($array as $item) {
+            if ($callback($item))
+                return $item;
+        }
+
+        return null;
+    }
+
+    /**
+     * Build a filter callback.
+     *
+     * @param string|callable $key
+     * @param string|null     $operator
+     * @param mixed           $value
+     */
+    private static function filterForWhere($key, string $operator = null, $value = null): callable
+    {
+        // Ensure that the key is not a callable string.
+        if (false == is_string($key) && is_callable($key)) {
+            return $key;
+        }
+
+        return function ($item) use ($key, $operator, $value) {
+            $retrieved = Arr::get($item, $key);
+
+            switch ($operator) {
+                case '=':  return $retrieved == $value;
+                case '!=': return $retrieved != $value;
+                case '>':  return $retrieved > $value;
+                case '<':  return $retrieved < $value;
+                case '>=': return $retrieved >= $value;
+                case '<=': return $retrieved <= $value;
+                default:
+                    throw new InvalidArgumentException("Invalid operator $operator.");
+            }
+        };
     }
 }
