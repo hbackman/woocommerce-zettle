@@ -14,8 +14,6 @@ class StockEvents
     {
         $this->plugin = $plugin;
 
-        //woocommerce_saved_order_items
-
         // Register hooks.
         add_action('woocommerce_variation_set_stock', [$this, 'on_variant_stock_change']);
         add_action('woocommerce_product_set_stock',   [$this, 'on_product_stock_change']);
@@ -26,6 +24,11 @@ class StockEvents
      */
     public function on_variant_stock_change(WC_Product $variant): void
     {
+        // The Zettle webhooks will trigger the stock change. The stock is already in
+        // sync when this happens.
+        if ($this->plugin->is_webhook_running())
+            return;
+
         $product = wc_get_product($variant->get_parent_id());
 
         $product_uuid = get_post_meta($product->get_id(), "zettle_uuid", true);
@@ -61,6 +64,11 @@ class StockEvents
      */
     public function on_product_stock_change(WC_Product $product): void
     {
+        // The Zettle webhooks will trigger the stock change. The stock is already in
+        // sync when this happens.
+        if ($this->plugin->is_webhook_running())
+            return;
+
         $product_uuid = get_post_meta($product->get_id(), "zettle_uuid", true);
 
         // Ensure valid product id.

@@ -67,7 +67,7 @@ class ProductCreate extends Webhook
         }
 
         $product = new WC_Product_Simple();
-        $product->set_status("publish");
+        $product->set_status("draft");
 
         $price /= 100;
 
@@ -94,7 +94,7 @@ class ProductCreate extends Webhook
 
         // Product
         $product = new WC_Product_Variable();
-        $product->set_status("publish");
+        $product->set_status("draft");
         $product->set_name($name);
 
         // Attributes

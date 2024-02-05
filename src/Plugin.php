@@ -24,6 +24,11 @@ class Plugin
     private static $instance;
 
     /**
+     * Track if the plugin is currently executing webhooks.
+     */
+    private bool $webhook_running = false;
+
+    /**
      * The plugin webhooks.
      *
      * @var class-string<Webhook>[]
@@ -67,6 +72,14 @@ class Plugin
     {
         return $this->get_zettle_client_id() &&
                $this->get_zettle_client_secret();
+    }
+
+    /**
+     * Check if the plugin is currently serving a webhook.
+     */
+    public function is_webhook_running(): bool
+    {
+        return $this->webhook_running;
     }
 
     /**
@@ -208,6 +221,8 @@ class Plugin
             // Retrieve the event name.
             $webhook = $content["eventName"] ?? null;
 
+            $this->webhook_running = true;
+
             // Invoke the hook if found.
             foreach ($this->webhooks as $hook) {
                 $hook = new $hook($this);
@@ -215,6 +230,8 @@ class Plugin
                 if ($hook->action == $webhook)
                     $hook->handle($request);
             }
+
+            $this->webhook_running = false;
         });
 
         add_action("zettle_connected", function () {
