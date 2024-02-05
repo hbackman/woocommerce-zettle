@@ -5,6 +5,7 @@ defined("ABSPATH") or exit;
 
 use Automattic\Jetpack\Constants;
 use Zettle\Admin\Settings;
+use Zettle\Commands\MatchProductsCommand;
 use Zettle\Support\Arr;
 use Zettle\Support\Jwt;
 use Zettle\Webhook\InventoryBalanceChanged;
@@ -15,6 +16,7 @@ use Zettle\Webhook\Request;
 use Zettle\Webhook\TestMessage;
 use Zettle\Webhook\Webhook;
 use InvalidArgumentException;
+use WP_CLI;
 
 class Plugin
 {
@@ -63,6 +65,7 @@ class Plugin
 
         $this->init_webhooks();
         $this->init_settings();
+        $this->init_commands();
     }
 
     /**
@@ -273,6 +276,25 @@ class Plugin
             }
             return $actions;
         }, 10, 2);
+    }
+
+    /**
+     * Init WP_CLI commands.
+     */
+    private function init_commands(): void
+    {
+        if (! defined("WP_CLI") || ! WP_CLI)
+            return;
+
+        // Initialize woocommerce.
+
+        $woocommerce = "woocommerce/woocommerce.php";
+        $woocommerce = dirname(ZETTLE_PLUGIN, 2) .DIRECTORY_SEPARATOR.$woocommerce;
+        include_once $woocommerce;
+
+        // Register commands.
+
+        WP_CLI::add_command("zettle match-products", MatchProductsCommand::class);
     }
 
     /**

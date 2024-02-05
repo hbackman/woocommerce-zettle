@@ -17,6 +17,7 @@ services:
     restart: always
     volumes:
       - ./:/var/www/html/wp-content/plugins/woocommerce-zettle
+      - wordpress_data:/var/www/html
     ports:
       - "5000:80"
     environment:
@@ -25,5 +26,20 @@ services:
       WORDPRESS_DB_USER: root
       WORDPRESS_DB_PASSWORD: secret
       WORDPRESS_DEBUG: 1
+  wordpress_cli:
+    depends_on:
+      - wordpress
+    image: wordpress:cli
+    command: tail -f /dev/null
+    volumes:
+      - ./:/var/www/html/wp-content/plugins/woocommerce-zettle
+      - wordpress_data:/var/www/html
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: secret
+      WORDPRESS_DEBUG: 1
 volumes:
   mysql_data: {}
+  wordpress_data: {}

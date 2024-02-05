@@ -82,6 +82,56 @@ class Arr
     }
 
     /**
+     * Index the array by the given key or callable.
+     *
+     * @param array           $array
+     * @param string|callable $key
+     *
+     * @return array
+     */
+    public static function keyBy(array $array, $key): array
+    {
+        if (self::useForCallable($key))
+            $callback = $key;
+        else {
+            $callback = function ($item) use ($key) {
+                return Arr::get($item, $key);
+            };
+        }
+
+        $results = [];
+
+        foreach ($array as $key => $item) {
+            $results[$callback($item)] = $item;
+        }
+
+        return $results;
+    }
+
+    /**
+     * Flatten an array.
+     */
+    public static function flatten(array $array, int $depth = INF): array
+    {
+        $results = [];
+
+        foreach ($array as $item) {
+            if (! is_array($item))
+                $results[] = $item;
+            else {
+                $values = $depth === 1
+                    ? array_values($item)
+                    : self::flatten($item, $depth - 1);
+
+                foreach ($values as $value)
+                    $results[] = $value;
+            }
+        }
+
+        return $results;
+    }
+
+    /**
      * Filter an array based on a callable.
      *
      * @param array           $array
@@ -130,7 +180,7 @@ class Arr
     private static function filterForWhere($key, string $operator = null, $value = null): callable
     {
         // Ensure that the key is not a callable string.
-        if (false == is_string($key) && is_callable($key)) {
+        if (self::useForCallable($key)) {
             return $key;
         }
 
@@ -148,5 +198,13 @@ class Arr
                     throw new InvalidArgumentException("Invalid operator $operator.");
             }
         };
+    }
+
+    /**
+     * Check if the callback can be used as a callable.
+     */
+    private static function useForCallable($callback): bool
+    {
+        return false == is_string($callback) && is_callable($callback);
     }
 }

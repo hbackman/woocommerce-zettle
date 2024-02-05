@@ -10,7 +10,8 @@
     "name": "ydgcam"
   }],
   "scripts": {
-    "test": "docker compose exec wordpress bash -c 'cd wp-content/plugins/woocommerce-zettle && vendor/bin/phpunit'"
+    "test": "docker compose exec wordpress bash -c 'cd wp-content/plugins/woocommerce-zettle && vendor/bin/phpunit'",
+    "wp": "docker compose exec wordpress_cli wp"
   },
   "autoload": {
     "psr-4": {

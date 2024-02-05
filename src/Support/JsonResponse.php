@@ -47,6 +47,21 @@ class JsonResponse extends WP_HTTP_Requests_Response
                $this->get_status() <= 299;
     }
 
+    public function get_link(string $rel): ?string
+    {
+        $link = $this->get_headers()["link"];
+
+        if (! $link)
+            return null;
+
+        preg_match('/<(.*)>; rel=\"'.$rel.'\",?/', $link, $matches);
+
+        $full = $matches[0] ?? null;
+        $link = $matches[1] ?? null;
+
+        return $link;
+    }
+
     /**
      * Extends/casts the given response into a JsonResponse.
      */

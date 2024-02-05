@@ -8,6 +8,7 @@ use WP_Error;
 use Zettle\Support\Arr;
 use Zettle\Support\JsonResponse;
 use Exception;
+use RuntimeException;
 
 class Zettle
 {
@@ -26,6 +27,32 @@ class Zettle
     public function __construct(Plugin $plugin)
     {
         $this->plugin = $plugin;
+    }
+
+    /**
+     * Retrieve products from the library.
+     */
+    public function get_library_products(): array
+    {
+        $products = [];
+
+        // Zettle uses the "link" header for pagination. This is handled by looping
+        // the requests until the "next" link is empty.
+        do {
+            $endpoint = $next ?? self::ENDPOINT_PRODUCTS."/library";
+            $response = $this->json_request("GET", $endpoint);
+
+            if (! $response->is_successful())
+                throw new RuntimeException("Failed to retrieve Zettle library.");
+
+            $next = $response->get_link("next");
+            $data = $response->json("products");
+
+            if (is_array($data))
+                array_push($products, ...($data ?? []));
+        } while ($next);
+
+        return $products;
     }
 
     /**
