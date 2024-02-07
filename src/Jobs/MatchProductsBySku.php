@@ -77,6 +77,9 @@ class MatchProductsBySku
 
                     $zettle_variant = Arr::get($variant_sku_map, $sku);
 
+                    // Match
+                    // First
+
                     // Zettle variant must exist.
                     if (! $zettle_variant)
                         continue;
@@ -95,23 +98,17 @@ class MatchProductsBySku
     /**
      * Retrieve WooCommerce products.
      */
-    private function get_woocommerce_products(): Traversable
+    private function get_woocommerce_products(): array
     {
-        $loop = new WP_Query([
-            "post_type"  => "product",
-            "meta_query" => [[
-                "key"     => "zettle_uuid",
-                "compare" => "NOT EXISTS",
-            ]],
-        ]);
+        $args = [
+            "status"   => ["draft", "pending", "private", "publish"],
+            "type"     => array_keys(wc_get_product_types()),
+            "limit"    => -1,
+            "offset"   => null,
+            "page"     => 1,
+            "paginate" => false,
+        ];
 
-        while ($loop->have_posts()) {
-            $loop->the_post();
-
-            global $product;
-            yield $product;
-        }
-
-        wp_reset_query();
+        return wc_get_products($args);
     }
 }

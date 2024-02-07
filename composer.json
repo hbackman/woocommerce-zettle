@@ -11,7 +11,8 @@
   }],
   "scripts": {
     "test": "docker compose exec wordpress bash -c 'cd wp-content/plugins/woocommerce-zettle && vendor/bin/phpunit'",
-    "wp": "docker compose exec wordpress_cli wp"
+    "wp": "docker compose exec wordpress_cli wp",
+    "build": "./build/build.sh"
   },
   "autoload": {
     "psr-4": {

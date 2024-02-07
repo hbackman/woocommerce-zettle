@@ -5,7 +5,8 @@ defined("ABSPATH") or exit;
 
 use Automattic\Jetpack\Constants;
 use Zettle\Admin\Settings;
-use Zettle\Commands\MatchProductsCommand;
+use Zettle\Commands\MatchProducts;
+use Zettle\Commands\StockSync;
 use Zettle\Support\Arr;
 use Zettle\Support\Jwt;
 use Zettle\Webhook\InventoryBalanceChanged;
@@ -17,6 +18,7 @@ use Zettle\Webhook\TestMessage;
 use Zettle\Webhook\Webhook;
 use InvalidArgumentException;
 use WP_CLI;
+use Closure;
 
 class Plugin
 {
@@ -26,9 +28,9 @@ class Plugin
     private static $instance;
 
     /**
-     * Track if the plugin is currently executing webhooks.
+     * Track if the plugin should be preventing the stock update events.
      */
-    private bool $webhook_running = false;
+    private bool $prevent_stock_update = false;
 
     /**
      * The plugin webhooks.
@@ -80,9 +82,21 @@ class Plugin
     /**
      * Check if the plugin is currently serving a webhook.
      */
-    public function is_webhook_running(): bool
+    public function prevent_stock_update(): bool
     {
-        return $this->webhook_running;
+        return $this->prevent_stock_update;
+    }
+
+    /**
+     * Execute the callback without stock update events.
+     */
+    public function without_stock_update(Closure $callback): void
+    {
+        $this->prevent_stock_update = true;
+
+        $callback();
+
+        $this->prevent_stock_update = false;
     }
 
     /**
@@ -224,7 +238,7 @@ class Plugin
             // Retrieve the event name.
             $webhook = $content["eventName"] ?? null;
 
-            $this->webhook_running = true;
+            $this->prevent_stock_update = true;
 
             // Invoke the hook if found.
             foreach ($this->webhooks as $hook) {
@@ -234,7 +248,7 @@ class Plugin
                     $hook->handle($request);
             }
 
-            $this->webhook_running = false;
+            $this->prevent_stock_update = false;
         });
 
         add_action("zettle_connected", function () {
@@ -294,7 +308,8 @@ class Plugin
 
         // Register commands.
 
-        WP_CLI::add_command("zettle match-products", MatchProductsCommand::class);
+        WP_CLI::add_command("zettle match-products", MatchProducts::class);
+        WP_CLI::add_command("zettle stock-sync", StockSync::class);
     }
 
     /**

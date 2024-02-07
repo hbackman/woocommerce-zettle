@@ -26,7 +26,7 @@ class StockEvents
     {
         // The Zettle webhooks will trigger the stock change. The stock is already in
         // sync when this happens.
-        if ($this->plugin->is_webhook_running())
+        if ($this->plugin->prevent_stock_update())
             return;
 
         $product = wc_get_product($variant->get_parent_id());
@@ -66,7 +66,7 @@ class StockEvents
     {
         // The Zettle webhooks will trigger the stock change. The stock is already in
         // sync when this happens.
-        if ($this->plugin->is_webhook_running())
+        if ($this->plugin->prevent_stock_update())
             return;
 
         $product_uuid = get_post_meta($product->get_id(), "zettle_uuid", true);

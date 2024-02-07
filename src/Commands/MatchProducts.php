@@ -5,7 +5,7 @@ use WP_CLI_Command;
 use Zettle\Jobs\MatchProductsBySku;
 use Zettle\Plugin;
 
-class MatchProductsCommand extends WP_CLI_Command
+class MatchProducts extends WP_CLI_Command
 {
     /**
      * Run the command.
