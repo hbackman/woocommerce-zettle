@@ -1,8 +1,8 @@
 <?php
-namespace Zettle\Test\Support;
+namespace Zettle\Test\Unit\Support;
 
-use PHPUnit\Framework\TestCase;
 use Zettle\Support\Arr;
+use Zettle\Test\TestCase;
 
 class ArrTest extends TestCase
 {
@@ -96,5 +96,66 @@ class ArrTest extends TestCase
         $this->assertCount(2, $ret);
         $this->assertContains("Foo", $ret);
         $this->assertContains("Bar", $ret);
+    }
+
+    public function testKeyBy()
+    {
+        $data = [
+            ["id" => 1, "first_name" => "Joe"],
+            ["id" => 3, "first_name" => "Kamal"],
+        ];
+
+        $ret = Arr::keyBy($data, "id");
+
+        $this->assertEquals("Joe",   $ret[1]["first_name"]);
+        $this->assertEquals("Kamal", $ret[3]["first_name"]);
+    }
+
+    public function testKeyByWithCallable()
+    {
+        $data = [
+            ["post_id" => 1, "post_content" => "Lorem ipsum dolor sit amet."],
+            ["post_id" => 2, "post_content" => "Sed sit amet posuere tortor."],
+        ];
+
+        $ret = Arr::keyBy($data, fn ($item) => md5($item["post_content"]));
+
+        $this->assertArrayHasKey(md5("Lorem ipsum dolor sit amet."),  $ret);
+        $this->assertArrayHasKey(md5("Sed sit amet posuere tortor."), $ret);
+    }
+
+    public function testFlatten()
+    {
+        $data = [
+            1, [2, [3, [4, [5]]]],
+        ];
+
+        $this->assertEquals([1, 2, 3, 4, 5], Arr::flatten($data));
+        $this->assertEquals([1, 2, 3, 4, [5]], Arr::flatten($data, 3));
+    }
+
+    public function testWhere()
+    {
+        // There could definitely be more coverage here. But idk, I dont want to do it.
+
+        $data = [
+            ["post_id" => 1, "post_type" => "post"],
+            ["post_id" => 2, "post_type" => "attachment"],
+            ["post_id" => 3, "post_type" => "attachment"],
+        ];
+
+        $this->assertCount(1, Arr::where($data, "post_type", "=", "post"));
+        $this->assertCount(2, Arr::where($data, "post_type", "=", "attachment"));
+    }
+
+    public function testFirst()
+    {
+        $data = [
+            ["post_id" => 1, "post_type" => "post"],
+            ["post_id" => 2, "post_type" => "attachment"],
+        ];
+
+        $this->assertEquals($data[1], Arr::first($data, "post_id", "=", 2));
+        $this->assertEquals(null,     Arr::first($data, "post_id", "=", 4));
     }
 }

@@ -1,9 +1,9 @@
 <?php
-namespace Zettle\Test\Support;
+namespace Zettle\Test\Unit\Support;
 
-use PHPUnit\Framework\TestCase;
-use Zettle\Support\Jwt;
 use InvalidArgumentException;
+use Zettle\Support\Jwt;
+use Zettle\Test\TestCase;
 
 class JwtTest extends TestCase
 {

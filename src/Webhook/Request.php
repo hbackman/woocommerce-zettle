@@ -1,6 +1,8 @@
 <?php
 namespace Zettle\Webhook;
 
+use Zettle\Support\Arr;
+
 class Request
 {
     /**
@@ -44,6 +46,19 @@ class Request
             $this->json = json_decode($this->body(), true);
 
         return $this->json;
+    }
+
+    /**
+     * Retrieve the a request header.
+     */
+    public function header(string $header): ?string
+    {
+        $header = Arr::get($this->headers, $header);
+
+        if ($header !== null)
+            $header = (string) $header;
+
+        return $header;
     }
 
     /**

@@ -47,19 +47,34 @@ class JsonResponse extends WP_HTTP_Requests_Response
                $this->get_status() <= 299;
     }
 
+    /**
+     * Returns a named link from the 'Link' header.
+     */
     public function get_link(string $rel): ?string
     {
-        $link = $this->get_headers()["link"];
+        return Arr::get($this->get_links(), $rel);
+    }
 
-        if (! $link)
-            return null;
+    /**
+     * Returns the response links.
+     */
+    public function get_links(): array
+    {
+        $links = $this->get_headers()["link"];
+        $links = explode(",", $links);
 
-        preg_match('/<(.*)>; rel=\"'.$rel.'\",?/', $link, $matches);
+        $links = Arr::map($links, function ($link) {
+            preg_match('/<(.*)>; rel=\"(.*)\"/', $link, $matches);
 
-        $full = $matches[0] ?? null;
-        $link = $matches[1] ?? null;
+            $type = $matches[2] ?? null;
+            $link = $matches[1] ?? null;
 
-        return $link;
+            return ["type" => $type, "link" => $link];
+        });
+
+        $links = Arr::pluck($links, "link", "type");
+
+        return $links;
     }
 
     /**
@@ -67,6 +82,6 @@ class JsonResponse extends WP_HTTP_Requests_Response
      */
     public static function create(WP_HTTP_Requests_Response $response): self
     {
-        return new JsonResponse($response->response, $response->filename,);
+        return new JsonResponse($response->response, $response->filename);
     }
 }

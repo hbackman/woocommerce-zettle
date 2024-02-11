@@ -74,11 +74,23 @@ class Arr
     /**
      * Pluck a value from an array.
      */
-    public static function pluck(array $array, string $key): array
+    public static function pluck(array $array, string $value, ?string $key = null): array
     {
-        return array_map(function (array $item) use ($key) {
-            return self::get($item, $key);
-        }, $array);
+        $results = [];
+
+        foreach ($array as $item) {
+            $itemValue = self::get($item, $value);
+
+            if (is_null($key))
+                $results[] = $itemValue;
+            else {
+                $itemKey = self::get($item, $key);
+
+                $results[$itemKey] = $itemValue;
+            }
+        }
+
+        return $results;
     }
 
     /**
@@ -111,7 +123,7 @@ class Arr
     /**
      * Flatten an array.
      */
-    public static function flatten(array $array, int $depth = INF): array
+    public static function flatten(array $array, int $depth = PHP_INT_MAX): array
     {
         $results = [];
 
