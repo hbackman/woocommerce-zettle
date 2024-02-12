@@ -5,10 +5,10 @@ defined("ABSPATH") or exit;
 
 use Automattic\Jetpack\Constants;
 use Zettle\Admin\Settings;
-use Zettle\Commands\FakeWebhook;
-use Zettle\Commands\GetProductLibrary;
+use Zettle\Commands\RunWebhook;
+use Zettle\Commands\GetLibrary;
 use Zettle\Commands\MatchProducts;
-use Zettle\Commands\StockSync;
+use Zettle\Commands\RunStockSync;
 use Zettle\Support\Arr;
 use Zettle\Support\Jwt;
 use Zettle\Webhook\InventoryBalanceChanged;
@@ -311,9 +311,9 @@ class Plugin
         // Register commands.
 
         WP_CLI::add_command("zettle match-products", MatchProducts::class);
-        WP_CLI::add_command("zettle stock-sync", StockSync::class);
-        WP_CLI::add_command("zettle fake-webhook", FakeWebhook::class);
-        WP_CLI::add_command("zettle get-product-library", GetProductLibrary::class);
+        WP_CLI::add_command("zettle run-stock-sync", RunStockSync::class);
+        WP_CLI::add_command("zettle run-webhook", RunWebhook::class);
+        WP_CLI::add_command("zettle get-library", GetLibrary::class);
     }
 
     /**

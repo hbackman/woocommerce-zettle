@@ -7,7 +7,7 @@ use Zettle\Plugin;
 use Zettle\Support\Arr;
 use Zettle\Webhook\Request;
 
-class FakeWebhook extends WP_CLI_Command
+class RunWebhook extends WP_CLI_Command
 {
     /**
      * Run the command.

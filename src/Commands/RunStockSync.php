@@ -7,7 +7,7 @@ use WC_Product;
 use Zettle\Plugin;
 use Zettle\Zettle;
 
-class StockSync extends WP_CLI_Command
+class RunStockSync extends WP_CLI_Command
 {
     private Plugin $plugin;
     private Zettle $zettle;

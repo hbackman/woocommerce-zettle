@@ -4,7 +4,7 @@ namespace Zettle\Commands;
 use WP_CLI_Command;
 use Zettle\Plugin;
 
-class GetProductLibrary extends WP_CLI_Command
+class GetLibrary extends WP_CLI_Command
 {
     /**
      * Run the command.
