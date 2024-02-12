@@ -126,7 +126,7 @@ class Plugin
             dd("panic", debug_backtrace());
         }
 
-        z_plugin_disable(ZETTLE_PLUGIN);
+        wcz_plugin_disable(ZETTLE_PLUGIN);
     }
 
     /**

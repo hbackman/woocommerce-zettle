@@ -22,8 +22,8 @@ define('ZETTLE_PLUGIN', __FILE__);
  */
 require __DIR__ . "/vendor/autoload.php";
 
-if (z_plugin_enabled("woocommerce/woocommerce.php") == false) {
-    z_plugin_disable(ZETTLE_PLUGIN);
+if (wcz_plugin_enabled("woocommerce/woocommerce.php") == false) {
+    wcz_plugin_disable(ZETTLE_PLUGIN);
 
     add_action('admin_notices', function () {
         global $current_screen;

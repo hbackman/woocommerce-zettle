@@ -1,10 +1,10 @@
 <?php
 
-if (! function_exists("z_plugin_enabled")) {
+if (! function_exists("wcz_plugin_enabled")) {
     /**
      * Check if a plugin is enabled.
      */
-    function z_plugin_enabled(string $plugin): bool
+    function wcz_plugin_enabled(string $plugin): bool
     {
         $active_plugins = apply_filters('active_plugins', get_option('active_plugins'));
 
@@ -17,11 +17,11 @@ if (! function_exists("z_plugin_enabled")) {
     }
 }
 
-if (! function_exists("z_plugin_disable")) {
+if (! function_exists("wcz_plugin_disable")) {
     /**
      * Disable a plugin.
      */
-    function z_plugin_disable(string $plugin): void
+    function wcz_plugin_disable(string $plugin): void
     {
         include_once ABSPATH . 'wp-admin/includes/plugin.php';
         deactivate_plugins($plugin);
