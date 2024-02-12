@@ -1,0 +1,11 @@
+.zettle-status-icon {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border-radius: 100%;
+    margin-top: 2px;
+}
+
+.column-zettle_status {
+    text-align: center !important;
+}

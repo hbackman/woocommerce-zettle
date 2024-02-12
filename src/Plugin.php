@@ -4,6 +4,7 @@ namespace Zettle;
 defined("ABSPATH") or exit;
 
 use Automattic\Jetpack\Constants;
+use Zettle\Admin\Products;
 use Zettle\Admin\Settings;
 use Zettle\Commands\GetInventories;
 use Zettle\Commands\RunWebhook;
@@ -69,7 +70,7 @@ class Plugin
         new StockEvents($this);
 
         $this->init_webhooks();
-        $this->init_settings();
+        $this->init_admin();
         $this->init_commands();
     }
 
@@ -271,8 +272,15 @@ class Plugin
     /**
      * Init admin settings page.
      */
-    private function init_settings(): void
+    private function init_admin(): void
     {
+        add_action("admin_enqueue_scripts", function () {
+            wp_register_style("wc_zettle_admin", plugins_url("assets/admin.css", ZETTLE_PLUGIN));
+            wp_enqueue_style("wc_zettle_admin");
+        });
+
+        new Products();
+
         add_filter("woocommerce_get_settings_pages", function ($a) {
             new Settings($this);
 
