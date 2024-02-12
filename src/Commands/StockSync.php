@@ -53,7 +53,6 @@ class StockSync extends WP_CLI_Command
                     continue;
                 }
 
-
                 $variant->set_manage_stock(true);
                 $variant->set_stock_quantity($stock);
                 $variant->save();

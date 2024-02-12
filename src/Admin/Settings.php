@@ -91,15 +91,6 @@ class Settings extends WC_Settings_Page
             "id"    => "wc_zettle_client_secret",
         ];
         $fields[] = [
-            "title" => "Access Token",
-            "type"  => "textarea",
-            "value" => $this->plugin->get_zettle_access_token(),
-            "custom_attributes" => [
-                "readonly" => "",
-                "rows"     => "5",
-            ],
-        ];
-        $fields[] = [
             "type" => "sectionend",
         ];
 

@@ -147,10 +147,34 @@ class ProductCreate extends Webhook
             $name = Arr::get($attr, "name");
             $opts = Arr::get($attr, "properties.*.value", []);
 
-            $attribute->set_id(wc_attribute_taxonomy_id_by_name($name));
-            $attribute->set_name($name);
-            $attribute->set_options($opts);
+            $slug = wc_attribute_taxonomy_name($name);
 
+            // Attempt to retrieve the product attribute.
+            $id = wc_attribute_taxonomy_id_by_name($slug);
+
+            // Attempt to create it if it wasn't found.
+            if ($id == 0) {
+                $id = wc_create_attribute([
+                    "name" => $name,
+                    "slug" => $slug,
+                ]);
+
+                register_taxonomy(
+                    $slug,
+                    apply_filters("woocommerce_taxonomy_objects_$slug", ["product"]),
+                    apply_filters("woocommerce_taxonomy_args_$slug", [
+                        "hierarchical" => true,
+                        "show_ui"      => false,
+                        "query_var"    => true,
+                        "rewrite"      => false,
+                    ])
+                );
+            }
+
+            $attribute->set_id($id);
+            $attribute->set_name($slug);
+
+            $attribute->set_options($opts);
             $attribute->set_variation(true);
             $attribute->set_visible(true);
 
@@ -177,10 +201,9 @@ class ProductCreate extends Webhook
         $options = [];
 
         foreach (Arr::get($data, "options", []) as $option) {
-            $name  = Arr::get($option, "name");
-            $value = Arr::get($option, "value");
-
-            $options[wc_attribute_taxonomy_slug($name)] = $value;
+            $name = wc_attribute_taxonomy_name(Arr::get($option, "name"));
+            $slug = wc_attribute_taxonomy_slug(Arr::get($option, "value"));
+            $options[$name] = $slug;
         }
 
         $variant->set_attributes($options);

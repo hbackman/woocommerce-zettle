@@ -1,8 +1,6 @@
 <?php
 namespace Zettle\Webhook;
 
-use Ramsey\Uuid\Uuid;
-
 class TestMessage extends Webhook
 {
     /**

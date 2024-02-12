@@ -26,4 +26,4 @@ The "sold" inventory. This will be automatic later on.
 
 ### TODO
 - Validate token scopes.
-- Fix delete (its not updating variant stock);
+- Show zettle sync status on products list.

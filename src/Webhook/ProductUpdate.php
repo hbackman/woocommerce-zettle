@@ -103,10 +103,9 @@ class ProductUpdate extends Webhook
         $options = [];
 
         foreach (Arr::get($data, "options", []) as $option) {
-            $name  = Arr::get($option, "name");
-            $value = Arr::get($option, "value");
-
-            $options[wc_attribute_taxonomy_slug($name)] = $value;
+            $name = wc_attribute_taxonomy_name(Arr::get($option, "name"));
+            $slug = wc_attribute_taxonomy_slug(Arr::get($option, "value"));
+            $options[$name] = $slug;
         }
 
         $variation->set_attributes($options);

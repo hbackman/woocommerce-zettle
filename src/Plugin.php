@@ -5,6 +5,8 @@ defined("ABSPATH") or exit;
 
 use Automattic\Jetpack\Constants;
 use Zettle\Admin\Settings;
+use Zettle\Commands\FakeWebhook;
+use Zettle\Commands\GetProductLibrary;
 use Zettle\Commands\MatchProducts;
 use Zettle\Commands\StockSync;
 use Zettle\Support\Arr;
@@ -37,7 +39,7 @@ class Plugin
      *
      * @var class-string<Webhook>[]
      */
-    private array $webhooks = [
+    public array $webhooks = [
         InventoryBalanceChanged::class,
         TestMessage::class,
         ProductCreate::class,
@@ -310,6 +312,8 @@ class Plugin
 
         WP_CLI::add_command("zettle match-products", MatchProducts::class);
         WP_CLI::add_command("zettle stock-sync", StockSync::class);
+        WP_CLI::add_command("zettle fake-webhook", FakeWebhook::class);
+        WP_CLI::add_command("zettle get-product-library", GetProductLibrary::class);
     }
 
     /**

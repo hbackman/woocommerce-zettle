@@ -41,32 +41,50 @@ class InventoryBalanceChanged extends Webhook
                 continue;
             }
 
+            if (! $variant && $product->get_type() == "variable") {
+                $this->plugin
+                    ->logger()
+                    ->error("zettle_variant_id_not_found", $variant_uuid);
+                continue;
+            }
+
+            // Update stock.
+
             if ($product->get_type() == "simple") {
-                // If the product does not have stock management enabled, then
-                // it needs to be enabled before the stock is set.
-
-                if (false == $product->managing_stock()) {
-                    $product->set_manage_stock(true);
-                    $product->save();
-                }
-
-                wc_update_product_stock($product, $variant_stock);
+                $this->updateProductStock($product, $variant_stock);
             }
 
             if ($product->get_type() == "variable") {
-                // If the variant does not have stock management enabled, then
-                // it needs to be enabled before the stock is set.
-                if (false == $variant->managing_stock()) {
-                    $variant->set_manage_stock(true);
-                    $variant->save();
-                }
-
-                wc_update_product_stock($variant, $variant_stock);
+                $this->updateVariantStock($variant, $variant_stock);
             }
 
             // No other types than the ones above are supported by this plugin
             // yet. I don't think Zettle supports external or grouped products.
         }
+    }
+
+    private function updateProductStock($product, $stock): void
+    {
+        // If the product does not have stock management enabled, then
+        // it needs to be enabled before the stock is set.
+        if (false == $product->managing_stock()) {
+            $product->set_manage_stock(true);
+            $product->save();
+        }
+
+        wc_update_product_stock($product, $stock);
+    }
+
+    private function updateVariantStock($variant, $stock): void
+    {
+        // If the variant does not have stock management enabled, then
+        // it needs to be enabled before the stock is set.
+        if (false == $variant->managing_stock()) {
+            $variant->set_manage_stock(true);
+            $variant->save();
+        }
+
+        wc_update_product_stock($variant, $stock);
     }
 
     private function productCreateRaceFix(): void

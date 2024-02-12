@@ -1,7 +1,7 @@
 <?php
 namespace Zettle\Support;
 
-use InvalidArgumentException;
+use Webmozart\Assert\Assert;
 
 class Jwt
 {
@@ -82,12 +82,13 @@ class Jwt
     /**
      * Parse a jwt.
      */
-    public static function parse(string $jwt): Jwt
+    public static function parse(?string $jwt): Jwt
     {
+        Assert::notEmpty($jwt, "The token cannot be empty.");
+
         $tokens = explode(".", $jwt);
 
-        if (count($tokens) !== 3)
-            throw new InvalidArgumentException("Token does not have 3 sections.");
+        Assert::count($tokens, 3, "Token does not have 3 sections.");
 
         [$head64, $body64, $signature] = $tokens;
 
