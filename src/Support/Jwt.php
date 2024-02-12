@@ -84,7 +84,7 @@ class Jwt
      */
     public static function parse(?string $jwt): Jwt
     {
-        Assert::notEmpty($jwt, "The token cannot be empty.");
+        Assert::notNull($jwt, "The token cannot be empty.");
 
         $tokens = explode(".", $jwt);
 

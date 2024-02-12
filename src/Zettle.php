@@ -56,6 +56,20 @@ class Zettle
     }
 
     /**
+     * Retrieve inventories.
+     */
+    public function get_inventories(): array
+    {
+        $endpoint = self::ENDPOINT_INVENTORY."/inventories";
+        $response = $this->json_request("GET", $endpoint);
+
+        if (! $response->is_successful())
+            throw new RuntimeException("Failed to retrieve Zettle inventories.");
+
+        return $response->json();
+    }
+
+    /**
      * Set the stock quantity for a given variant uuid.
      */
     public function set_variant_stock(

@@ -81,5 +81,14 @@ class JwtTest extends TestCase
         catch (InvalidArgumentException $e) {
             $this->assertEquals("Token does not have 3 sections.", $e->getMessage());
         }
+
+        try {
+            Jwt::parse(null);
+
+            $this->fail("JWT::parse accepted a null token.");
+        }
+        catch (InvalidArgumentException $e) {
+            $this->assertEquals("The token cannot be empty.", $e->getMessage());
+        }
     }
 }

@@ -158,4 +158,16 @@ class ArrTest extends TestCase
         $this->assertEquals($data[1], Arr::first($data, "post_id", "=", 2));
         $this->assertEquals(null,     Arr::first($data, "post_id", "=", 4));
     }
+
+    public function testContains()
+    {
+        $data = [
+            "foo",
+            "bar",
+        ];
+
+        $this->assertTrue(Arr::contains($data, "foo"));
+        $this->assertTrue(Arr::contains($data, "bar"));
+        $this->assertFalse(Arr::contains($data, "baz"));
+    }
 }

@@ -94,6 +94,14 @@ class Arr
     }
 
     /**
+     * Check if the array contains a value.
+     */
+    public static function contains(array $array, $value): bool
+    {
+        return in_array($value, $array);
+    }
+
+    /**
      * Index the array by the given key or callable.
      *
      * @param array           $array
