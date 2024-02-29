@@ -37,6 +37,11 @@ class Plugin
     private bool $prevent_stock_update = false;
 
     /**
+     * The queued admin notices.
+     */
+    private array $admin_notices = [];
+
+    /**
      * The plugin webhooks.
      *
      * @var class-string<Webhook>[]
@@ -72,6 +77,7 @@ class Plugin
         $this->init_webhooks();
         $this->init_admin();
         $this->init_commands();
+        $this->init_notices();
     }
 
     /**
@@ -256,7 +262,7 @@ class Plugin
         });
 
         add_action("zettle_connected", function () {
-            $this->zettle->create_pusher_subscription([
+            $this->zettle->create_webhook([
                 "ProductCreated",
                 "ProductUpdated",
                 "ProductDeleted",
@@ -265,7 +271,7 @@ class Plugin
         });
 
         add_action("zettle_disconnected", function () {
-            $this->zettle->delete_pusher_subscription();
+            $this->zettle->delete_webhook();
         });
     }
 
@@ -324,6 +330,29 @@ class Plugin
         WP_CLI::add_command("zettle run-webhook", RunWebhook::class);
         WP_CLI::add_command("zettle get-library", GetLibrary::class);
         WP_CLI::add_command("zettle get-inventories", GetInventories::class);
+    }
+
+    public function init_notices(): void
+    {
+        add_action("admin_notices", function () {
+            foreach ($this->admin_notices as $notice) {
+                printf(
+                    '<div class="notice notice-%1$s is-dismissable"><p>%2$s</p></div>',
+                    esc_attr($notice["type"]),
+                    $notice["message"]
+                );
+            }
+        });
+    }
+
+    /**
+     * Add an admin panel notice.
+     */
+    public function push_notice(string $type, string $message, bool $escaped = false): void
+    {
+        $this->admin_notices[] = $escaped
+            ? ["type" => $type, "message" => $message]
+            : ["type" => $type, "message" => esc_html($message)];
     }
 
     /**

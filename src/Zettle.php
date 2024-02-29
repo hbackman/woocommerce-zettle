@@ -238,12 +238,27 @@ class Zettle
         update_option("zettle_signing_key", $key);
     }
 
+    public function get_webhooks(): JsonResponse
+    {
+        $response = $this->json_request("GET", self::ENDPOINT_PUSHER."/subscriptions");
+
+        if (false == $response->is_successful()) {
+
+            // TODO: Handle error
+
+            return $response;
+        }
+
+
+        return $response;
+    }
+
     /**
      * Register a subscription in zettle.
      */
-    public function create_pusher_subscription(array $events): void
+    public function create_webhook(array $events): void
     {
-        $this->delete_pusher_subscription();
+        // $this->delete_webhook();
 
         $payload = [
             "uuid"          => Uuid::uuid1()->toString(),
@@ -269,7 +284,7 @@ class Zettle
     /**
      * Unregister a subscription in zettle.
      */
-    public function delete_pusher_subscription(): void
+    public function delete_webhook(): void
     {
         $response = $this->json_request("GET", self::ENDPOINT_PUSHER."/subscriptions");
 

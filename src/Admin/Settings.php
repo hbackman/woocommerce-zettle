@@ -5,7 +5,6 @@ defined("ABSPATH") or exit;
 
 use WC_Settings_Page;
 use Zettle\Plugin;
-use Zettle\Support\Arr;
 
 class Settings extends WC_Settings_Page
 {
@@ -23,9 +22,149 @@ class Settings extends WC_Settings_Page
 
         parent::__construct();
 
-        add_action("woocommerce_admin_field_button", [$this, "button"]);
+        add_action("woocommerce_admin_field_zettle_button", [$this, "zettle_button"]);
+        add_action("woocommerce_admin_field_zettle_status", [$this, "zettle_status"]);
 
         $this->check_for_rebuild_webhooks();
+
+        if (false == $this->plugin->is_connected()) {
+            $this->plugin->push_notice(
+                "warning",
+                "Zettle for WooCommerce is not enabled. To enable, <a href=\"{$this->get_url()}\">go to the plugin settings.</a>",
+                true
+            );
+        }
+    }
+
+    /**
+     * Get own sections.
+     */
+    protected function get_own_sections(): array
+    {
+        return [
+            ""            => __("General", "wc_zettle"),
+            "inventories" => __("Inventories", "wc_zettle"),
+            "webhooks"    => __("Webhooks", "wc_zettle"),
+        ];
+    }
+
+    /**
+     * Get the settings for the default section.
+     */
+    protected function get_settings_for_default_section(): array
+    {
+        $fields = [];
+        $fields[] = [
+            "title" => __("Zettle Integration Settings", "wc_zettle"),
+            "type"  => "title",
+        ];
+        $fields[] = [
+            "title" => "Integration Client ID",
+            "type"  => "text",
+            "id"    => "wc_zettle_client_id",
+        ];
+        $fields[] = [
+            "title" => "Integration API-key",
+            "type"  => "text",
+            "id"    => "wc_zettle_client_secret",
+        ];
+        $fields[] = [
+            "type" => "sectionend",
+        ];
+        return $fields;
+    }
+
+    /**
+     * Get the settings for the inventories section.
+     */
+    protected function get_settings_for_inventories_section(): array
+    {
+        $fields = [];
+        $fields[] = [
+            "title" => __("Inventory", "wc_zettle"),
+            "type"  => "title",
+        ];
+        $fields[] = [
+            "title" => "Inventory UUID - Store",
+            "type"  => "text",
+            "id"    => "wc_zettle_inventory_store",
+        ];
+        $fields[] = [
+            "title" => "Inventory UUID - Sold",
+            "type"  => "text",
+            "id"    => "wc_zettle_inventory_sold",
+        ];
+        $fields[] = [
+            "type"  => "sectionend",
+        ];
+        return $fields;
+    }
+
+    /**
+     * Get the settings for the webhooks section.
+     */
+    protected function get_settings_for_webhooks_section(): array
+    {
+        $fields = [];
+        $fields[] = [
+            "title" => __("Webhooks", "wc_zettle"),
+            "type"  => "title",
+        ];
+        $fields[] = [
+            "title" => __("Refresh", "wc_zettle"),
+            "type"  => "zettle_button",
+            "text"  => "Refresh",
+            "href"  => $this->get_url()."&rebuild_webhooks=1",
+        ];
+        $fields[] = [
+            "title" => __("Webhooks", "wc_zettle"),
+            "type"  => "webhooks",
+        ];
+        $fields[] = [
+            "type"  => "sectionend",
+        ];
+        return $fields;
+    }
+
+    /**
+     * Save settings.
+     */
+    public function save()
+    {
+        $connected = $this->plugin->is_connected();
+
+        parent::save();
+
+        // After the settings has been saved, check which fields have been updated
+        // and determine if Zettle has recently been connected or disconnected.
+
+        $client_id = get_option("wc_zettle_client_id");
+        $client_sc = get_option("wc_zettle_client_secret");
+
+        if ($connected) {
+            if (empty($client_id) || empty($client_sc))
+                do_action("zettle_disconnected");
+        }
+        else {
+            if (!empty($client_id) && !empty($client_sc))
+                do_action("zettle_connected");
+        }
+    }
+
+    /**
+ * Output the settings.
+ */
+    public function output()
+    {
+        global $current_section;
+        switch ($current_section) {
+            case "webhooks":
+                parent::output();
+                $this->webhooks_screen();
+                return;
+            default:
+                parent::output();
+        }
     }
 
     private function check_for_rebuild_webhooks()
@@ -53,7 +192,7 @@ class Settings extends WC_Settings_Page
     /**
      * Settings form button.
      */
-    public function button(array $options): void
+    public function zettle_button(array $options): void
     {
         ?><tr valign="top">
             <th scope="row" class="titledesc">
@@ -68,100 +207,33 @@ class Settings extends WC_Settings_Page
     }
 
     /**
-     * Get the settings configuration.
+     * Display the webhooks table.
      */
-    public function get_settings(): array
+    public function webhooks_screen(): void
     {
-        $fields = [];
-        $fields[] = [
-            "title" => __("Zettle Settings", "wc_zettle"),
-            "type"  => "title",
-        ];
+        $webhooks = $this->plugin->zettle()
+            ->get_webhooks()
+            ->json();
 
-        // ZETTLE AUTH -------------------------------------------------
-
-        $fields[] = [
-            "title" => "Client ID",
-            "type"  => "text",
-            "id"    => "wc_zettle_client_id",
-        ];
-        $fields[] = [
-            "title" => "API-key",
-            "type"  => "text",
-            "id"    => "wc_zettle_client_secret",
-        ];
-        $fields[] = [
-            "type" => "sectionend",
-        ];
-
-        // WEBHOOKS ----------------------------------------------------
-
-        $fields[] = [
-            "title" => __("Webhooks", "wc_zettle"),
-            "type"  => "title",
-        ];
-        $fields[] = [
-            "title" => "URL",
-            "type"  => "text",
-            "id"    => "wc_zettle_webhook_url",
-        ];
-        $fields[] = [
-            "title" => "Refresh",
-            "type"  => "button",
-            "text"  => "Refresh",
-            "href"  => $this->get_url()."&rebuild_webhooks=1",
-        ];
-        $fields[] = [
-            "type" => "sectionend",
-        ];
-
-        // Inventory ---------------------------------------------------
-
-        $fields[] = [
-            "title" => __("Inventory", "wc_zettle"),
-            "type"  => "title",
-        ];
-        $fields[] = [
-            "title" => "Inventory UUID - Store",
-            "type"  => "text",
-            "id"    => "wc_zettle_inventory_store",
-        ];
-        $fields[] = [
-            "title" => "Inventory UUID - Sold",
-            "type"  => "text",
-            "id"    => "wc_zettle_inventory_sold",
-        ];
-        $fields[] = [
-            "type" => "sectionend",
-        ];
-
-        // -------------------------------------------------------------
-
-        return apply_filters("woocommerce_{$this->id}_settings", $fields);
-    }
-
-    /**
-     * Save settings.
-     */
-    public function save()
-    {
-        $connected = Plugin::instance()->is_connected();
-
-        parent::save();
-
-        // After the settings has been saved, check which fields have been updated
-        // and determine if Zettle has recently been connected or disconnected.
-
-        $client_id = get_option("wc_zettle_client_id");
-        $client_sc = get_option("wc_zettle_client_secret");
-
-        if ($connected) {
-            if (empty($client_id) || empty($client_sc))
-                do_action("zettle_disconnected");
-        }
-        else {
-            if (!empty($client_id) && !empty($client_sc))
-                do_action("zettle_connected");
-        }
+        ?><table class="wp-list-table widefat">
+            <thead>
+            <tr>
+                <th scope="col">Destination</th>
+                <th scope="col">Status</th>
+                <th scope="col">Event Names</th>
+                <th scope="col">Updated</th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($webhooks as $webhook): ?>
+                <tr>
+                    <td><?php esc_html_e($webhook["destination"]); ?></td>
+                    <td><?php esc_html_e($webhook["status"]); ?></td>
+                    <td><?php esc_html_e($webhook["updated"]); ?></td>
+                    <td><?php esc_html_e(implode(", ", $webhook["eventNames"])); ?></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table><?php
     }
 }

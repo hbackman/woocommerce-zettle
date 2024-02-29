@@ -8,4 +8,15 @@
 
 .column-zettle_status {
     text-align: center !important;
+    width: 5em;
+}
+
+.zettle-status-connected {
+    font-weight: bold;
+    color: #7ad03a;
+}
+
+.zettle-status-disconnected {
+    font-weight: bold;
+    color: #a00;
 }

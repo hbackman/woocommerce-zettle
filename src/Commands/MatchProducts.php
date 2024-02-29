@@ -2,7 +2,6 @@
 namespace Zettle\Commands;
 
 use WP_CLI_Command;
-use Zettle\Jobs\MatchProductsBySku;
 use Zettle\Plugin;
 use Zettle\Support\Arr;
 
