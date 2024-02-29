@@ -23,17 +23,12 @@ class Settings extends WC_Settings_Page
         parent::__construct();
 
         add_action("woocommerce_admin_field_zettle_button", [$this, "zettle_button"]);
-        add_action("woocommerce_admin_field_zettle_status", [$this, "zettle_status"]);
 
-        $this->check_for_rebuild_webhooks();
-
-        if (false == $this->plugin->is_connected()) {
-            $this->plugin->push_notice(
-                "warning",
-                "Zettle for WooCommerce is not enabled. To enable, <a href=\"{$this->get_url()}\">go to the plugin settings.</a>",
-                true
-            );
-        }
+        add_action("update_option_wc_zettle_webhook_url", function () {
+            // When the webhook url updates, refresh the plugin connection.
+            do_action("zettle_disconnected");
+            do_action("zettle_connected");
+        });
     }
 
     /**
@@ -44,7 +39,7 @@ class Settings extends WC_Settings_Page
         return [
             ""            => __("General", "wc_zettle"),
             "inventories" => __("Inventories", "wc_zettle"),
-            "webhooks"    => __("Webhooks", "wc_zettle"),
+            "advanced"    => __("Advanced", "wc_zettle"),
         ];
     }
 
@@ -101,24 +96,19 @@ class Settings extends WC_Settings_Page
     }
 
     /**
-     * Get the settings for the webhooks section.
+     * Get the settings for the advanced section.
      */
-    protected function get_settings_for_webhooks_section(): array
+    protected function get_settings_for_advanced_section(): array
     {
         $fields = [];
         $fields[] = [
-            "title" => __("Webhooks", "wc_zettle"),
+            "title" => __("Advanced", "wc_zettle"),
             "type"  => "title",
         ];
         $fields[] = [
-            "title" => __("Refresh", "wc_zettle"),
-            "type"  => "zettle_button",
-            "text"  => "Refresh",
-            "href"  => $this->get_url()."&rebuild_webhooks=1",
-        ];
-        $fields[] = [
-            "title" => __("Webhooks", "wc_zettle"),
-            "type"  => "webhooks",
+            "title" => "Webhook URL",
+            "type"  => "text",
+            "id"    => "wc_zettle_webhook_url",
         ];
         $fields[] = [
             "type"  => "sectionend",
@@ -152,44 +142,6 @@ class Settings extends WC_Settings_Page
     }
 
     /**
- * Output the settings.
- */
-    public function output()
-    {
-        global $current_section;
-        switch ($current_section) {
-            case "webhooks":
-                parent::output();
-                $this->webhooks_screen();
-                return;
-            default:
-                parent::output();
-        }
-    }
-
-    private function check_for_rebuild_webhooks()
-    {
-        if (! array_key_exists("rebuild_webhooks", $_GET))
-            return;
-
-        // The easiest way to build webhooks is to let the plugin trigger the
-        // activation again..
-        do_action("zettle_connected");
-
-        // Redirect back to the regular url to avoid the user from refreshing
-        // hooks by coming back to the page.
-        wp_redirect($this->get_url());
-    }
-
-    /**
-     * Retrieve the settings page url.
-     */
-    private function get_url(): string
-    {
-        return admin_url("admin.php?page=wc-settings&tab=".esc_attr($this->id));
-    }
-
-    /**
      * Settings form button.
      */
     public function zettle_button(array $options): void
@@ -198,42 +150,14 @@ class Settings extends WC_Settings_Page
             <th scope="row" class="titledesc">
                 <?php echo $options["title"] ?? ""; ?>
             </th>
-            <td class="forminp">
-                <a href="<?php echo $options["href"] ?? ""; ?>" class="button-primary woocommerce-save-button">
-                    <?php echo $options["text"] ?? ""; ?>
-                </a>
+            <td class="forminp forminp-button">
+                <button
+                    id="<?php esc_attr_e($options["id"] ?? ""); ?>"
+                    name="<?php esc_attr_e($options["name"] ?? ""); ?>"
+                    class="button">
+                    <?php esc_html_e($options["text"] ?? ""); ?>
+                </button>
             </td>
         </tr><?php
-    }
-
-    /**
-     * Display the webhooks table.
-     */
-    public function webhooks_screen(): void
-    {
-        $webhooks = $this->plugin->zettle()
-            ->get_webhooks()
-            ->json();
-
-        ?><table class="wp-list-table widefat">
-            <thead>
-            <tr>
-                <th scope="col">Destination</th>
-                <th scope="col">Status</th>
-                <th scope="col">Event Names</th>
-                <th scope="col">Updated</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($webhooks as $webhook): ?>
-                <tr>
-                    <td><?php esc_html_e($webhook["destination"]); ?></td>
-                    <td><?php esc_html_e($webhook["status"]); ?></td>
-                    <td><?php esc_html_e($webhook["updated"]); ?></td>
-                    <td><?php esc_html_e(implode(", ", $webhook["eventNames"])); ?></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table><?php
     }
 }

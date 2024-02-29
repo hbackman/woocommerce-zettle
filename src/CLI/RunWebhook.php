@@ -1,5 +1,5 @@
 <?php
-namespace Zettle\Commands;
+namespace Zettle\CLI;
 
 use Webmozart\Assert\Assert;
 use WP_CLI_Command;

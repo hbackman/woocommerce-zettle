@@ -6,11 +6,11 @@ defined("ABSPATH") or exit;
 use Automattic\Jetpack\Constants;
 use Zettle\Admin\Products;
 use Zettle\Admin\Settings;
-use Zettle\Commands\GetInventories;
-use Zettle\Commands\RunWebhook;
-use Zettle\Commands\GetLibrary;
-use Zettle\Commands\MatchProducts;
-use Zettle\Commands\RunStockSync;
+use Zettle\CLI\GetInventories;
+use Zettle\CLI\RunWebhook;
+use Zettle\CLI\GetLibrary;
+use Zettle\CLI\MatchProducts;
+use Zettle\CLI\RunStockSync;
 use Zettle\Support\Arr;
 use Zettle\Support\Jwt;
 use Zettle\Webhook\InventoryBalanceChanged;
@@ -78,6 +78,15 @@ class Plugin
         $this->init_admin();
         $this->init_commands();
         $this->init_notices();
+
+        if (true == $this->is_connected()) {
+            $href = admin_url("admin.php?page=wc-settings&tab=zettle");
+            $this->push_notice(
+                "warning",
+                "Zettle for WooCommerce is not enabled. To enable, <a href=\"$href\">go to the plugin settings.</a>",
+                true
+            );
+        }
     }
 
     /**
@@ -240,7 +249,7 @@ class Plugin
     private function init_webhooks(): void
     {
         // Webhook handler.
-        add_action("wp_ajax_nopriv_zettle_webhook",  function () {
+        add_action("wp_ajax_nopriv_zettle_webhook", function () {
             // Retrieve the request data.
             $request = Request::make();
             $content = $request->json();
@@ -282,7 +291,10 @@ class Plugin
     {
         add_action("admin_enqueue_scripts", function () {
             wp_register_style("wc_zettle_admin", plugins_url("assets/admin.css", ZETTLE_PLUGIN));
+            wp_register_script("wc_zettle_admin", plugins_url("assets/admin.js", ZETTLE_PLUGIN));
+
             wp_enqueue_style("wc_zettle_admin");
+            wp_enqueue_script("wc_zettle_admin");
         });
 
         new Products();
@@ -332,6 +344,9 @@ class Plugin
         WP_CLI::add_command("zettle get-inventories", GetInventories::class);
     }
 
+    /**
+     * Initialize the admin notices.
+     */
     public function init_notices(): void
     {
         add_action("admin_notices", function () {

@@ -1,11 +1,11 @@
 <?php
-namespace Zettle\Commands;
+namespace Zettle\CLI;
 
 use WP_CLI_Command;
 use Zettle\Plugin;
 use Zettle\Support\Arr;
 
-class GetLibrary extends WP_CLI_Command
+class GetInventories extends WP_CLI_Command
 {
     /**
      * Run the command.
@@ -14,16 +14,16 @@ class GetLibrary extends WP_CLI_Command
     {
         $asJson = Arr::contains($args, "format=json");
 
-        $products = Plugin::instance()
+        $inventories = Plugin::instance()
             ->zettle()
-            ->get_library_products();
+            ->get_inventories();
 
         if ($asJson) {
-            echo json_encode($products);
+            echo json_encode($inventories);
             echo PHP_EOL;
         }
         else {
-            dd($products);
+            dd($inventories);
         }
     }
 }

@@ -258,8 +258,6 @@ class Zettle
      */
     public function create_webhook(array $events): void
     {
-        // $this->delete_webhook();
-
         $payload = [
             "uuid"          => Uuid::uuid1()->toString(),
             "transportName" => "WEBHOOK",

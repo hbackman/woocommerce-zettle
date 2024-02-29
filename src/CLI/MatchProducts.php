@@ -1,5 +1,5 @@
 <?php
-namespace Zettle\Commands;
+namespace Zettle\CLI;
 
 use WP_CLI_Command;
 use Zettle\Plugin;
