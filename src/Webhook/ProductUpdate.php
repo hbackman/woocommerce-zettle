@@ -19,11 +19,9 @@ class ProductUpdate extends Webhook
     {
         [$payload] = $this->unpack($request);
 
-        $data = Arr::get($payload, "newEntity");
-
         // Update the product.
 
-        $product_uuid = Arr::get($data, "uuid");
+        $product_uuid = Arr::get($payload, "uuid");
         $product_data = $this->plugin
             ->zettle()
             ->get_product($product_uuid);
@@ -57,8 +55,10 @@ class ProductUpdate extends Webhook
             foreach (Arr::get($data, "variants", []) as $variant) {
                 // If the update encounters any errors then it may return null. Handle
                 // this by wrapping the save call in an if statement.
-                if ($variation = $this->update_product_variant($variant))
+                if ($variation = $this->update_product_variant($variant)) {
+                    $variation->set_parent_id($product->get_id());
                     $variation->save();
+                }
             }
         }
         else {
@@ -83,9 +83,8 @@ class ProductUpdate extends Webhook
 
         $variation = wc_get_product_by_zettle_uuid($uuid);
 
-        if (! $variation) {
-            $this->plugin->logger()->error("zettle_variant_id_not_found", $uuid);
-            return null;
+        if (null == $variation) {
+            $variation = new WC_Product_Variation();
         }
 
         $price = Arr::get($data, "price.amount");

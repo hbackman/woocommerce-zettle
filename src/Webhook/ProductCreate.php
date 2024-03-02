@@ -103,7 +103,7 @@ class ProductCreate extends Webhook
         // Before we create variants, we need to ensure that the product exists.
         $product->set_attributes($attributes);
         $product->save();
-
+        
         // After the product is created, store the zettle uuid in the post meta
         // so that the plugin can look it up later.
         update_post_meta($product->get_id(), "zettle_uuid", $uuid);
