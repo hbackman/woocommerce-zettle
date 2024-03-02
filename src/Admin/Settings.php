@@ -54,12 +54,12 @@ class Settings extends WC_Settings_Page
             "type"  => "title",
         ];
         $fields[] = [
-            "title" => "Integration Client ID",
+            "title" => __("Integration Client ID", "wc_zettle"),
             "type"  => "text",
             "id"    => "wc_zettle_client_id",
         ];
         $fields[] = [
-            "title" => "Integration API-key",
+            "title" => __("Integration API-key", "wc_zettle"),
             "type"  => "text",
             "id"    => "wc_zettle_client_secret",
         ];
@@ -80,12 +80,12 @@ class Settings extends WC_Settings_Page
             "type"  => "title",
         ];
         $fields[] = [
-            "title" => "Inventory UUID - Store",
+            "title" => __("Inventory UUID - Store", "wc_zettle"),
             "type"  => "text",
             "id"    => "wc_zettle_inventory_store",
         ];
         $fields[] = [
-            "title" => "Inventory UUID - Sold",
+            "title" => __("Inventory UUID - Sold", "wc_zettle"),
             "type"  => "text",
             "id"    => "wc_zettle_inventory_sold",
         ];
@@ -106,9 +106,15 @@ class Settings extends WC_Settings_Page
             "type"  => "title",
         ];
         $fields[] = [
-            "title" => "Webhook URL",
+            "title" => __("Webhook URL", "wc_zettle"),
             "type"  => "text",
             "id"    => "wc_zettle_webhook_url",
+        ];
+        $fields[] = [
+            "title" => __("Display sync status", "wc_zettle"),
+            "type"  => "checkbox",
+            "desc"  => __("Display the Zettle product sync status on the products table.", "wc_zettle"),
+            "id"    => "wc_zettle_display_sync_status",
         ];
         $fields[] = [
             "type"  => "sectionend",

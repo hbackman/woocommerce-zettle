@@ -8,8 +8,10 @@ class Products
      */
     public function __construct()
     {
-        add_filter("manage_product_posts_columns",       [$this, "add_product_list_columns"]);
-        add_action("manage_product_posts_custom_column", [$this, "add_product_list_columns_content"]);
+        if (get_option("wc_zettle_display_sync_status") == "yes") {
+            add_filter("manage_product_posts_columns",       [$this, "add_product_list_columns"]);
+            add_action("manage_product_posts_custom_column", [$this, "add_product_list_columns_content"]);
+        }
     }
 
     /**
