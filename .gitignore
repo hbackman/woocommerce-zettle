@@ -1,6 +1,5 @@
 /vendor/
 /.idea/
 .phpunit.result.cache
-SECRETS.md
 
 woocommerce-zettle.zip
