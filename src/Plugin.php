@@ -70,7 +70,7 @@ class Plugin
     public function init(): void
     {
         $this->zettle = new Zettle($this);
-        $this->logger = new Logger();
+        $this->logger = new Logger($this);
 
         new StockEvents($this);
 

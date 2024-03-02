@@ -16,50 +16,23 @@ use WC_Log_Levels;
  */
 class Logger
 {
-    private array $debug_logs = [];
-    private bool  $debug_logging = false;
+    /**
+     * Enable debug logging.
+     */
+    private bool $debug;
+
+    /**
+     * The plugin instance.
+     */
+    private Plugin $plugin;
 
     /**
      * Logger constructor.
      */
-    public function __construct()
+    public function __construct(Plugin $plugin)
     {
-        if (defined("WP_DEBUG") && WP_DEBUG) {
-            $this->init_debug_notices();
-        }
-    }
-
-    /**
-     * Enable the logger to print notices when a log is submitted.
-     */
-    private function init_debug_notices(): void
-    {
-        $this->debug_logging = true;
-
-        add_action("admin_notices", function () {
-            foreach ($this->debug_logs as [$method, $message]) {
-                switch ($method) {
-                    case WC_Log_Levels::EMERGENCY:
-                    case WC_Log_Levels::ALERT:
-                    case WC_Log_Levels::CRITICAL:
-                    case WC_Log_Levels::ERROR:
-                        $class = "notice-error"; break;
-                    case WC_Log_Levels::WARNING:
-                        $class = "notice-warning"; break;
-                    case WC_Log_Levels::NOTICE:
-                    case WC_Log_Levels::INFO:
-                    case WC_Log_Levels::DEBUG:
-                        $class = "notice-info"; break;
-                    default:
-                        $class = "";
-                }
-                printf(
-                    '<div class="notice %1$s is-dismissible"><p>%2$s</p></div>',
-                    esc_attr($class),
-                    esc_html($message)
-                );
-            }
-        });
+        $this->plugin = $plugin;
+        $this->debug = defined("WP_DEBUG") && WP_DEBUG;
     }
 
     /**
@@ -72,15 +45,29 @@ class Logger
         Assert::minCount($params, 1);
 
         // Build and save a log.
-
         $message = array_shift($params);
         $context = $params;
 
         $message .= " (".print_r($context, true).")";
 
-        // Save the log message if debug logging is enabled.
-        if ($this->debug_logging) {
-            $this->debug_logs[] = [$method, $message];
+        if ($this->debug) {
+            switch ($method) {
+                case WC_Log_Levels::EMERGENCY:
+                case WC_Log_Levels::ALERT:
+                case WC_Log_Levels::CRITICAL:
+                case WC_Log_Levels::ERROR:
+                    $type = "error"; break;
+                case WC_Log_Levels::WARNING:
+                    $type = "warning"; break;
+                case WC_Log_Levels::NOTICE:
+                case WC_Log_Levels::INFO:
+                case WC_Log_Levels::DEBUG:
+                    $type = "info"; break;
+                default:
+                    $type = "";
+            }
+
+            $this->plugin->push_notice($type, $message);
         }
 
         wc_get_logger()->log($method, $message, ["source" => "wc-zettle"]);
