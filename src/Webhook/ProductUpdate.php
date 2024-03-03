@@ -67,6 +67,8 @@ class ProductUpdate extends Webhook
             $sku   = Arr::get($data, "variants.0.sku");
             $price = Arr::get($data, "variants.0.price.amount");
 
+            $price /= 100;
+            
             $product->set_sku($sku);
             $product->set_regular_price($price);
         }
@@ -89,6 +91,8 @@ class ProductUpdate extends Webhook
 
         $price = Arr::get($data, "price.amount");
         $sku   = Arr::get($data, "sku");
+
+        $price /= 100;
 
         $variation->set_name($name);
         $variation->set_regular_price($price);
