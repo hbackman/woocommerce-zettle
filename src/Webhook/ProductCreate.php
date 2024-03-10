@@ -61,7 +61,7 @@ class ProductCreate extends Webhook
             return;
         }
 
-        if (wc_get_product_id_by_sku($sku)) {
+        if (wc_get_product_id_by_sku($sku) && $sku) {
             $this->plugin->logger()->error("zettle_product_sku_already_in_use", $sku);
             return;
         }
